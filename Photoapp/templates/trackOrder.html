@@ -1,0 +1,809 @@
+{% extends "base.html" %}
+
+{% block title %}Track Your Orders - PhotoVault{% endblock %}
+
+{% block auth_buttons %}
+    <button class="btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline">Log Out</span>
+    </button>
+{% endblock %}
+
+{% block sidebar %}
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Gallery</h6>
+            <a href="{% url 'client' %}" class="sidebar-link">
+                <i class="fas fa-images"></i>
+                <span>Preview/Purchased</span>
+            </a>
+            <a href="{% url 'cart' %}" class="sidebar-link">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Cart</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="sidebar-cart-count">0</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Orders</h6>
+            <a href="{% url 'trackOrder' %}" class="sidebar-link active">
+                <i class="fas fa-shipping-fast"></i>
+                <span>Track Order</span>
+                <span class="badge bg-info rounded-pill ms-auto" id="active-orders-count">3</span>
+            </a>
+            <a href="{% url 'orderHistory' %}" class="sidebar-link">
+                <i class="fas fa-history"></i>
+                <span>Order History</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Account</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-user-cog"></i>
+                <span>Profile Settings</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-credit-card"></i>
+                <span>Payment Methods</span>
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Track Order Header -->
+    <div class="track-header bg-pv-very-light py-4 px-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h1 class="h2 mb-0 text-pv-deep">
+                <i class="fas fa-shipping-fast me-2"></i>
+                Track Your Orders
+            </h1>
+            <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                <div class="input-group" style="max-width: 300px;">
+                    <input type="text" class="form-control" placeholder="Enter order number..." id="order-search">
+                    <button class="btn btn-pv-primary" onclick="searchOrder()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <button class="sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Orders Section -->
+    <div class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="text-contrast">
+                <i class="fas fa-truck me-2 text-pv-light"></i>
+                Active Orders
+                <span class="badge bg-pv-light ms-2" id="active-orders-badge">3 orders</span>
+            </h3>
+            <button class="btn-pv-outline btn-sm" onclick="refreshOrders()">
+                <i class="fas fa-sync-alt me-1"></i>
+                Refresh
+            </button>
+        </div>
+
+        <!-- Order Tracking Cards -->
+        <div class="row g-4" id="active-orders">
+            <!-- Order 1 - In Transit -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">Order #PV-2024-001</h5>
+                            <small>Placed: Jan 10, 2024</small>
+                        </div>
+                        <span class="badge bg-warning text-dark">In Transit</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Progress Timeline -->
+                        <div class="order-timeline mb-4">
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Order Placed</h6>
+                                    <small class="text-muted">Jan 10, 2024 • 10:30 AM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Processing</h6>
+                                    <small class="text-muted">Jan 11, 2024 • 9:15 AM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Printed</h6>
+                                    <small class="text-muted">Jan 12, 2024 • 2:45 PM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step active">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-shipping-fast"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Shipped</h6>
+                                    <small class="text-muted">Jan 13, 2024 • 11:20 AM</small>
+                                    <div class="alert alert-info p-2 mt-1 mb-0">
+                                        <small>
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Expected delivery: Jan 17, 2024
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="timeline-step pending">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Delivered</h6>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Details -->
+                        <div class="order-details">
+                            <h6 class="mb-3">Order Details:</h6>
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Items:</small>
+                                    <p class="mb-0 fw-bold">2 Photos</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Total:</small>
+                                    <p class="mb-0 fw-bold text-pv-light">$45.98</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Shipping:</small>
+                                    <p class="mb-0">Express (2-3 days)</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Tracking #:</small>
+                                    <p class="mb-0">TRK-789456123</p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">Shipping Address:</small>
+                                <p class="mb-0">123 Main St, San Francisco, CA 94107</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-pv-very-light">
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-sm btn-pv-outline" onclick="viewOrderDetails('PV-2024-001')">
+                                <i class="fas fa-eye me-1"></i>
+                                View Details
+                            </button>
+                            <button class="btn btn-sm btn-pv-primary" onclick="openOrderModal()">
+                                <i class="fas fa-print me-1"></i>
+                                Reorder
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order 2 - Processing -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">Order #PV-2024-002</h5>
+                            <small>Placed: Jan 15, 2024</small>
+                        </div>
+                        <span class="badge bg-info">Processing</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Progress Timeline -->
+                        <div class="order-timeline mb-4">
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Order Placed</h6>
+                                    <small class="text-muted">Jan 15, 2024 • 3:45 PM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step active">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-cog fa-spin"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Processing</h6>
+                                    <small class="text-muted">In progress</small>
+                                    <div class="alert alert-primary p-2 mt-1 mb-0">
+                                        <small>
+                                            <i class="fas fa-clock me-1"></i>
+                                            Expected to ship: Tomorrow
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="timeline-step pending">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-print"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Printed</h6>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step pending">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-shipping-fast"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Shipped</h6>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step pending">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Delivered</h6>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Details -->
+                        <div class="order-details">
+                            <h6 class="mb-3">Order Details:</h6>
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Items:</small>
+                                    <p class="mb-0 fw-bold">1 Photo</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Total:</small>
+                                    <p class="mb-0 fw-bold text-pv-light">$22.99</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Shipping:</small>
+                                    <p class="mb-0">Standard (5-7 days)</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Tracking #:</small>
+                                    <p class="mb-0 text-muted">Will be assigned</p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">Shipping Address:</small>
+                                <p class="mb-0">456 Oak Ave, Los Angeles, CA 90001</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-pv-very-light">
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-sm btn-pv-outline" onclick="viewOrderDetails('PV-2024-002')">
+                                <i class="fas fa-eye me-1"></i>
+                                View Details
+                            </button>
+                            <button class="btn btn-sm btn-pv-outline" onclick="cancelOrder('PV-2024-002')">
+                                <i class="fas fa-times me-1"></i>
+                                Cancel Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order 3 - Delivered -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">Order #PV-2023-156</h5>
+                            <small>Placed: Dec 28, 2023</small>
+                        </div>
+                        <span class="badge bg-success">Delivered</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Progress Timeline -->
+                        <div class="order-timeline mb-4">
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Order Placed</h6>
+                                    <small class="text-muted">Dec 28, 2023 • 2:30 PM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Processing</h6>
+                                    <small class="text-muted">Dec 29, 2023 • 10:15 AM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Printed</h6>
+                                    <small class="text-muted">Dec 30, 2023 • 3:45 PM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Shipped</h6>
+                                    <small class="text-muted">Jan 2, 2024 • 11:20 AM</small>
+                                </div>
+                            </div>
+                            <div class="timeline-step completed">
+                                <div class="timeline-step-circle">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <div class="timeline-step-content">
+                                    <h6 class="mb-1">Delivered</h6>
+                                    <small class="text-muted">Jan 5, 2024 • 2:15 PM</small>
+                                    <div class="alert alert-success p-2 mt-1 mb-0">
+                                        <small>
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            Delivered to front door
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Details -->
+                        <div class="order-details">
+                            <h6 class="mb-3">Order Details:</h6>
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Items:</small>
+                                    <p class="mb-0 fw-bold">3 Photos</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Total:</small>
+                                    <p class="mb-0 fw-bold text-pv-light">$67.97</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Shipping:</small>
+                                    <p class="mb-0">Overnight</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Tracking #:</small>
+                                    <p class="mb-0">TRK-123456789</p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-muted">Delivered To:</small>
+                                <p class="mb-0">789 Pine St, Seattle, WA 98101</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-pv-very-light">
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-sm btn-pv-outline" onclick="viewOrderDetails('PV-2023-156')">
+                                <i class="fas fa-eye me-1"></i>
+                                View Details
+                            </button>
+                            <button class="btn btn-sm btn-pv-primary" onclick="openOrderModal()">
+                                <i class="fas fa-print me-1"></i>
+                                Reorder
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery Statistics -->
+    <div class="card mb-5">
+        <div class="card-header bg-pv-deep text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-line me-2"></i>
+                Delivery Statistics
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 col-6 text-center mb-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-pv-light">12</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 text-center mb-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-success">95%</div>
+                        <div class="stat-label">On-Time Delivery</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 text-center mb-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-info">2.3</div>
+                        <div class="stat-label">Avg Delivery Days</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 text-center mb-3">
+                    <div class="stat-card">
+                        <div class="stat-number text-pv-light">$489</div>
+                        <div class="stat-label">Total Spent</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shipping Information -->
+    <div class="card">
+        <div class="card-header bg-pv-very-light">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2 text-pv-light"></i>
+                Shipping Information & Support
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <h6><i class="fas fa-clock me-2 text-pv-light"></i>Processing Times</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Digital orders: Instant delivery</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Print orders: 1-2 business days</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Custom framing: +2-3 business days</li>
+                    </ul>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6><i class="fas fa-shipping-fast me-2 text-pv-light"></i>Shipping Options</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-truck me-2 text-muted"></i>Standard: 5-7 business days</li>
+                        <li><i class="fas fa-bolt me-2 text-muted"></i>Express: 2-3 business days</li>
+                        <li><i class="fas fa-rocket me-2 text-muted"></i>Overnight: 1 business day</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <h6><i class="fas fa-headset me-2 text-pv-light"></i>Need Help?</h6>
+                    <p class="mb-2">Contact our support team for tracking issues:</p>
+                    <button class="btn btn-pv-outline btn-sm me-2" onclick="contactSupport()">
+                        <i class="fas fa-comment-alt me-1"></i>
+                        Live Chat
+                    </button>
+                    <button class="btn btn-pv-outline btn-sm" onclick="openSupportModal()">
+                        <i class="fas fa-envelope me-1"></i>
+                        Email Support
+                    </button>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6><i class="fas fa-map-marker-alt me-2 text-pv-light"></i>Carrier Links</h6>
+                    <div class="d-flex gap-2">
+                        <a href="#" class="btn btn-outline-primary btn-sm">
+                            <i class="fab fa-ups me-1"></i>
+                            UPS
+                        </a>
+                        <a href="#" class="btn btn-outline-success btn-sm">
+                            <i class="fab fa-fedex me-1"></i>
+                            FedEx
+                        </a>
+                        <a href="#" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-truck me-1"></i>
+                            USPS
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Track Order specific styles */
+    .track-header {
+        border-bottom: 2px solid var(--pv-light-green);
+    }
+
+    .order-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+
+    .order-timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: var(--border-color);
+    }
+
+    .timeline-step {
+        position: relative;
+        margin-bottom: 25px;
+    }
+
+    .timeline-step:last-child {
+        margin-bottom: 0;
+    }
+
+    .timeline-step-circle {
+        position: absolute;
+        left: -30px;
+        top: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        z-index: 2;
+    }
+
+    .timeline-step.completed .timeline-step-circle {
+        background-color: var(--pv-light-green);
+    }
+
+    .timeline-step.active .timeline-step-circle {
+        background-color: var(--pv-medium-green);
+        animation: pulse 2s infinite;
+    }
+
+    .timeline-step.pending .timeline-step-circle {
+        background-color: var(--text-muted);
+    }
+
+    .timeline-step-content {
+        padding-left: 10px;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+        }
+    }
+
+    .stat-card {
+        padding: 15px;
+        background-color: var(--bg-surface);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+
+    /* Card status colors */
+    .card-header.bg-success {
+        background-color: var(--pv-light-green) !important;
+    }
+
+    .card-header.bg-info {
+        background-color: #17a2b8 !important;
+    }
+
+    .card-header.bg-primary {
+        background-color: var(--pv-medium-green) !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .track-header {
+            padding: 20px 15px;
+        }
+        
+        .order-timeline {
+            padding-left: 25px;
+        }
+        
+        .timeline-step-circle {
+            width: 25px;
+            height: 25px;
+            left: -25px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        updateOrderCounts();
+        loadCartFromStorage();
+    });
+
+    // Update order counts
+    function updateOrderCounts() {
+        const activeOrders = document.querySelectorAll('#active-orders .card').length;
+        document.getElementById('active-orders-count').textContent = activeOrders;
+        document.getElementById('active-orders-badge').textContent = activeOrders + ' order' + (activeOrders !== 1 ? 's' : '');
+    }
+
+    // Search order
+    function searchOrder() {
+        const searchTerm = document.getElementById('order-search').value.trim();
+        if (!searchTerm) {
+            showNotification('Please enter an order number', 'warning');
+            return;
+        }
+        
+        // Simulate search
+        showNotification(`Searching for order: ${searchTerm}`, 'info');
+        
+        // In a real app, this would make an API call
+        setTimeout(() => {
+            showNotification('Order found! Loading details...', 'success');
+            // Redirect to order details page
+            // window.location.href = `/order-details/${searchTerm}/`;
+        }, 1000);
+    }
+
+    // Refresh orders
+    function refreshOrders() {
+        const refreshBtn = document.querySelector('[onclick="refreshOrders()"]');
+        const originalText = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Refreshing...';
+        refreshBtn.disabled = true;
+        
+        // Simulate API refresh
+        setTimeout(() => {
+            refreshBtn.innerHTML = originalText;
+            refreshBtn.disabled = false;
+            showNotification('Orders refreshed successfully', 'success');
+        }, 1500);
+    }
+
+    // View order details
+    function viewOrderDetails(orderId) {
+        showNotification(`Loading order ${orderId} details...`, 'info');
+        // In a real app, this would open a modal or redirect
+        // openOrderDetailsModal(orderId);
+    }
+
+    // Cancel order
+    function cancelOrder(orderId) {
+        if (confirm(`Are you sure you want to cancel order ${orderId}?`)) {
+            showNotification(`Cancelling order ${orderId}...`, 'info');
+            
+            // Simulate API call
+            setTimeout(() => {
+                showNotification(`Order ${orderId} has been cancelled`, 'success');
+                // In a real app, this would update the UI
+            }, 1000);
+        }
+    }
+
+    // Contact support
+    function contactSupport() {
+        showNotification('Opening live chat...', 'info');
+        // In a real app, this would open a chat widget
+    }
+
+    // Open support modal
+    function openSupportModal() {
+        // Create and show support modal
+        const modalHTML = `
+            <div class="modal fade" id="supportModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Contact Support</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Order Number</label>
+                                <input type="text" class="form-control" placeholder="e.g., PV-2024-001">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Issue</label>
+                                <select class="form-select">
+                                    <option>Tracking Issue</option>
+                                    <option>Delivery Delay</option>
+                                    <option>Damaged Package</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Message</label>
+                                <textarea class="form-control" rows="4" placeholder="Describe your issue..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn-pv-primary" onclick="submitSupportRequest()">Submit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('supportModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Show modal
+        new bootstrap.Modal(document.getElementById('supportModal')).show();
+    }
+
+    // Submit support request
+    function submitSupportRequest() {
+        showNotification('Support request submitted. We\'ll contact you within 24 hours.', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('supportModal')).hide();
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} notification position-fixed`;
+        notification.style.top = '100px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    // Load cart from storage (for sidebar count)
+    function loadCartFromStorage() {
+        const savedCart = localStorage.getItem('photovault_cart');
+        if (savedCart) {
+            const cartItems = JSON.parse(savedCart);
+            const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+            document.getElementById('sidebar-cart-count').textContent = totalItems;
+        }
+    }
+</script>
+{% endblock %}

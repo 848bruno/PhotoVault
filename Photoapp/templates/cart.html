@@ -1,0 +1,733 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - PhotoVault{% endblock %}
+
+{% block auth_buttons %}
+    <button class="btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline">Log Out</span>
+    </button>
+{% endblock %}
+
+{% block sidebar %}
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Gallery</h6>
+            <a href="{% url 'client' %}" class="sidebar-link">
+                <i class="fas fa-images"></i>
+                <span>Preview/Purchased</span>
+            </a>
+            <a href="{% url 'cart' %}" class="sidebar-link active">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Cart</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="cart-count">3</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Orders</h6>
+            <a href="{% url 'trackOrder' %}" class="sidebar-link">
+                <i class="fas fa-shipping-fast"></i>
+                <span>Track Order</span>
+            </a>
+            <a href="{% url 'orderHistory' %}" class="sidebar-link">
+                <i class="fas fa-history"></i>
+                <span>Order History</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Account</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-user-cog"></i>
+                <span>Profile Settings</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-credit-card"></i>
+                <span>Payment Methods</span>
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Cart Header -->
+    <div class="cart-header bg-pv-very-light py-4 px-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h2 mb-0 text-pv-deep">
+                <i class="fas fa-shopping-cart me-2"></i>
+                Shopping Cart
+            </h1>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted" id="item-count">3 items</span>
+                <button class="btn-pv-outline btn-sm" onclick="clearCart()">
+                    <i class="fas fa-trash-alt me-1"></i>
+                    Clear Cart
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Cart Items Section -->
+        <div class="col-lg-8">
+            <!-- Cart Items List -->
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-pv-very-light">
+                                <tr>
+                                    <th class="border-0 ps-4" style="width: 60px;"></th>
+                                    <th class="border-0">Photo</th>
+                                    <th class="border-0 text-center">Type</th>
+                                    <th class="border-0 text-center">Quantity</th>
+                                    <th class="border-0 text-end">Price</th>
+                                    <th class="border-0 text-center pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-items">
+                                <!-- Digital Photo 1 -->
+                                <tr class="cart-item">
+                                    <td class="ps-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input item-checkbox" type="checkbox" checked>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="cart-item-image" style="width: 80px; height: 60px;">
+                                                <img src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" 
+                                                     alt="Wedding Photo" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Wedding Portrait #1</h6>
+                                                <p class="text-muted mb-0 small">Category: Wedding</p>
+                                                <p class="text-muted mb-0 small">Resolution: 8K (7680×4320)</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">Digital</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="quantity-control d-inline-flex align-items-center">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, -1)">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <input type="number" class="form-control form-control-sm text-center mx-2" 
+                                                   value="1" min="1" max="10" style="width: 60px;" 
+                                                   onchange="updateItemTotal(this)">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, 1)">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="item-price">$29.99</div>
+                                        <div class="item-total text-pv-light fw-bold">$29.99</div>
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- Digital Photo 2 -->
+                                <tr class="cart-item">
+                                    <td class="ps-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input item-checkbox" type="checkbox" checked>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="cart-item-image" style="width: 80px; height: 60px;">
+                                                <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" 
+                                                     alt="Landscape Photo" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Mountain Landscape</h6>
+                                                <p class="text-muted mb-0 small">Category: Landscape</p>
+                                                <p class="text-muted mb-0 small">Resolution: 4K (3840×2160)</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">Digital</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="quantity-control d-inline-flex align-items-center">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, -1)">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <input type="number" class="form-control form-control-sm text-center mx-2" 
+                                                   value="1" min="1" max="10" style="width: 60px;"
+                                                   onchange="updateItemTotal(this)">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, 1)">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="item-price">$19.99</div>
+                                        <div class="item-total text-pv-light fw-bold">$19.99</div>
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- Physical Print -->
+                                <tr class="cart-item">
+                                    <td class="ps-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input item-checkbox" type="checkbox" checked>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="cart-item-image" style="width: 80px; height: 60px;">
+                                                <img src="https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" 
+                                                     alt="Family Photo" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Family Portrait - Print</h6>
+                                                <p class="text-muted mb-0 small">Size: 8x10 inches</p>
+                                                <p class="text-muted mb-0 small">Paper: Premium Matte</p>
+                                                <p class="text-muted mb-0 small">Framing: None</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-warning text-dark">Physical Print</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="quantity-control d-inline-flex align-items-center">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, -1)">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <input type="number" class="form-control form-control-sm text-center mx-2" 
+                                                   value="2" min="1" max="10" style="width: 60px;"
+                                                   onchange="updateItemTotal(this)">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, 1)">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="item-price">$12.99</div>
+                                        <div class="item-total text-pv-light fw-bold">$25.98</div>
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipping Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-pv-very-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shipping-fast me-2"></i>
+                        Shipping Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Shipping Address</label>
+                            <textarea class="form-control" rows="3" id="shipping-address">123 Main Street, San Francisco, CA 94107</textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Shipping Method</label>
+                            <select class="form-select" id="shipping-method">
+                                <option value="standard" selected>Standard Shipping (5-7 business days) - $4.99</option>
+                                <option value="express">Express Shipping (2-3 business days) - $9.99</option>
+                                <option value="overnight">Overnight Shipping (1 business day) - $19.99</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Contact Email</label>
+                            <input type="email" class="form-control" value="john.doe@example.com">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" value="(555) 123-4567">
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="save-address">
+                        <label class="form-check-label" for="save-address">
+                            Save this shipping address for future orders
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Continue Shopping -->
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'client' %}" class="btn-pv-outline">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Continue Shopping
+                </a>
+                <button class="btn-pv-outline" onclick="saveForLater()">
+                    <i class="far fa-heart me-2"></i>
+                    Save for Later
+                </button>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header bg-pv-deep text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt me-2"></i>
+                        Order Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="order-summary">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal (3 items)</span>
+                            <span id="subtotal">$75.96</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Shipping</span>
+                            <span id="shipping-cost">$4.99</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tax</span>
+                            <span id="tax">$6.08</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Discount</span>
+                            <span class="text-success" id="discount">-$5.00</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-4">
+                            <h5 class="fw-bold">Total</h5>
+                            <h5 class="fw-bold text-pv-light" id="total">$82.03</h5>
+                        </div>
+
+                        <!-- Promo Code -->
+                        <div class="mb-4">
+                            <label class="form-label">Promo Code</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Enter promo code" id="promo-code">
+                                <button class="btn btn-pv-primary" type="button" onclick="applyPromoCode()">
+                                    Apply
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-success d-none" id="promo-success">Promo code applied successfully!</small>
+                                <small class="text-danger d-none" id="promo-error">Invalid promo code</small>
+                            </div>
+                        </div>
+
+                        <!-- Payment Methods -->
+                        <div class="mb-4">
+                            <label class="form-label">Payment Method</label>
+                            <div class="payment-methods">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="paymentMethod" id="creditCard" checked>
+                                    <label class="form-check-label d-flex align-items-center" for="creditCard">
+                                        <i class="fas fa-credit-card me-2"></i>
+                                        Credit/Debit Card
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="paymentMethod" id="paypal">
+                                    <label class="form-check-label d-flex align-items-center" for="paypal">
+                                        <i class="fab fa-paypal me-2"></i>
+                                        PayPal
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="paymentMethod" id="applePay">
+                                    <label class="form-check-label d-flex align-items-center" for="applePay">
+                                        <i class="fab fa-apple me-2"></i>
+                                        Apple Pay
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Checkout Button -->
+                        <button class="btn-pv-primary btn-lg w-100 mb-3" onclick="proceedToCheckout()">
+                            <i class="fas fa-lock me-2"></i>
+                            Proceed to Secure Checkout
+                        </button>
+
+                        <!-- Security Info -->
+                        <div class="text-center">
+                            <small class="text-muted d-block mb-2">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Secure SSL Encryption
+                            </small>
+                            <small class="text-muted">
+                                <i class="far fa-clock me-1"></i>
+                                Digital downloads available immediately after purchase
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support Info -->
+            <div class="card mt-4">
+                <div class="card-body text-center">
+                    <i class="fas fa-headset fa-2x text-pv-light mb-3"></i>
+                    <h6>Need Help?</h6>
+                    <p class="small text-muted mb-2">Our support team is here to help</p>
+                    <a href="#" class="btn-pv-outline btn-sm">
+                        <i class="fas fa-comment-alt me-1"></i>
+                        Live Chat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Cart-specific styles */
+    .cart-header {
+        border-bottom: 2px solid var(--pv-light-green);
+    }
+
+    .cart-item {
+        transition: background-color 0.2s ease;
+    }
+
+    .cart-item:hover {
+        background-color: var(--pv-very-light-green);
+    }
+
+    .cart-item-image {
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .quantity-control .btn {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .item-price {
+        color: var(--text-muted);
+        text-decoration: line-through;
+        font-size: 0.9rem;
+    }
+
+    .item-total {
+        font-size: 1.1rem;
+    }
+
+    .order-summary {
+        font-size: 0.95rem;
+    }
+
+    .payment-methods {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 15px;
+    }
+
+    .form-check-input:checked {
+        background-color: var(--pv-light-green);
+        border-color: var(--pv-light-green);
+    }
+
+    /* Sticky summary on scroll */
+    .sticky-top {
+        position: sticky;
+        z-index: 1020;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .cart-header {
+            padding: 20px 15px;
+        }
+        
+        .table-responsive {
+            font-size: 0.9rem;
+        }
+        
+        .cart-item-image {
+            width: 60px !important;
+            height: 45px !important;
+        }
+        
+        .quantity-control input {
+            width: 50px !important;
+        }
+    }
+</style>
+
+<script>
+    // Cart functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCartSummary();
+        
+        // Shipping method change
+        document.getElementById('shipping-method').addEventListener('change', updateCartSummary);
+        
+        // Item checkbox change
+        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateCartSummary);
+        });
+    });
+
+    // Update quantity
+    function updateQuantity(button, change) {
+        const input = button.parentElement.querySelector('input[type="number"]');
+        let value = parseInt(input.value) + change;
+        
+        if (value >= parseInt(input.min) && value <= parseInt(input.max)) {
+            input.value = value;
+            updateItemTotal(input);
+            updateCartSummary();
+        }
+    }
+
+    // Update item total
+    function updateItemTotal(input) {
+        const row = input.closest('tr');
+        const priceText = row.querySelector('.item-price').textContent;
+        const price = parseFloat(priceText.replace('$', ''));
+        const quantity = parseInt(input.value);
+        const total = price * quantity;
+        
+        row.querySelector('.item-total').textContent = '$' + total.toFixed(2);
+        updateCartSummary();
+    }
+
+    // Update cart summary
+    function updateCartSummary() {
+        let subtotal = 0;
+        let itemCount = 0;
+        
+        // Calculate subtotal from checked items
+        document.querySelectorAll('.cart-item').forEach(row => {
+            const checkbox = row.querySelector('.item-checkbox');
+            if (checkbox.checked) {
+                const itemTotalText = row.querySelector('.item-total').textContent;
+                const itemTotal = parseFloat(itemTotalText.replace('$', ''));
+                subtotal += itemTotal;
+                
+                const quantity = parseInt(row.querySelector('input[type="number"]').value);
+                itemCount += quantity;
+            }
+        });
+        
+        // Update item count
+        document.getElementById('item-count').textContent = itemCount + ' item' + (itemCount !== 1 ? 's' : '');
+        document.getElementById('cart-count').textContent = itemCount;
+        
+        // Calculate shipping
+        const shippingMethod = document.getElementById('shipping-method').value;
+        let shippingCost = 4.99; // Standard
+        
+        if (shippingMethod === 'express') {
+            shippingCost = 9.99;
+        } else if (shippingMethod === 'overnight') {
+            shippingCost = 19.99;
+        }
+        
+        // Apply free shipping for orders over $50
+        if (subtotal >= 50) {
+            shippingCost = 0;
+        }
+        
+        // Calculate tax (8%)
+        const tax = subtotal * 0.08;
+        
+        // Apply discount
+        let discount = 0;
+        const promoCode = document.getElementById('promo-code').value.toUpperCase();
+        if (promoCode === 'PHOTO10') {
+            discount = subtotal * 0.10; // 10% discount
+        } else if (promoCode === 'WELCOME5') {
+            discount = 5.00; // $5 discount
+        }
+        
+        // Calculate total
+        const total = subtotal + shippingCost + tax - discount;
+        
+        // Update summary display
+        document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
+        document.getElementById('shipping-cost').textContent = shippingCost === 0 ? 'FREE' : '$' + shippingCost.toFixed(2);
+        document.getElementById('tax').textContent = '$' + tax.toFixed(2);
+        document.getElementById('discount').textContent = discount > 0 ? '-$' + discount.toFixed(2) : '$0.00';
+        document.getElementById('total').textContent = '$' + total.toFixed(2);
+        
+        // Highlight free shipping
+        if (shippingCost === 0) {
+            document.getElementById('shipping-cost').classList.add('text-success', 'fw-bold');
+        } else {
+            document.getElementById('shipping-cost').classList.remove('text-success', 'fw-bold');
+        }
+    }
+
+    // Remove item from cart
+    function removeItem(button) {
+        const row = button.closest('tr');
+        if (confirm('Remove this item from your cart?')) {
+            row.style.opacity = '0.5';
+            setTimeout(() => {
+                row.remove();
+                updateCartSummary();
+                showNotification('Item removed from cart', 'success');
+            }, 300);
+        }
+    }
+
+    // Clear cart
+    function clearCart() {
+        if (confirm('Are you sure you want to clear your entire cart?')) {
+            document.querySelectorAll('.cart-item').forEach(row => {
+                row.remove();
+            });
+            updateCartSummary();
+            showNotification('Cart cleared', 'info');
+        }
+    }
+
+    // Apply promo code
+    function applyPromoCode() {
+        const promoCode = document.getElementById('promo-code').value.toUpperCase();
+        const validCodes = ['PHOTO10', 'WELCOME5', 'SAVE20'];
+        
+        if (promoCode === '') {
+            document.getElementById('promo-error').textContent = 'Please enter a promo code';
+            document.getElementById('promo-error').classList.remove('d-none');
+            document.getElementById('promo-success').classList.add('d-none');
+            return;
+        }
+        
+        if (validCodes.includes(promoCode)) {
+            document.getElementById('promo-success').classList.remove('d-none');
+            document.getElementById('promo-error').classList.add('d-none');
+            updateCartSummary();
+            showNotification('Promo code applied successfully!', 'success');
+        } else {
+            document.getElementById('promo-error').textContent = 'Invalid promo code';
+            document.getElementById('promo-error').classList.remove('d-none');
+            document.getElementById('promo-success').classList.add('d-none');
+        }
+    }
+
+    // Save for later
+    function saveForLater() {
+        const checkedItems = Array.from(document.querySelectorAll('.item-checkbox:checked'))
+            .map(checkbox => checkbox.closest('tr'));
+        
+        if (checkedItems.length === 0) {
+            alert('Please select items to save for later');
+            return;
+        }
+        
+        checkedItems.forEach(row => {
+            row.style.opacity = '0.5';
+            setTimeout(() => {
+                row.remove();
+            }, 300);
+        });
+        
+        setTimeout(() => {
+            updateCartSummary();
+            showNotification('Items saved for later', 'info');
+        }, 400);
+    }
+
+    // Proceed to checkout
+    function proceedToCheckout() {
+        const selectedItems = document.querySelectorAll('.item-checkbox:checked');
+        
+        if (selectedItems.length === 0) {
+            alert('Please select at least one item to checkout');
+            return;
+        }
+        
+        // Validate shipping info
+        const shippingAddress = document.getElementById('shipping-address').value.trim();
+        if (!shippingAddress) {
+            alert('Please enter your shipping address');
+            return;
+        }
+        
+        // Get selected payment method
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').id;
+        
+        // Show loading state
+        const checkoutBtn = document.querySelector('.btn-pv-primary.btn-lg');
+        const originalText = checkoutBtn.innerHTML;
+        checkoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
+        checkoutBtn.disabled = true;
+        
+        // Simulate API call
+        setTimeout(() => {
+            // Reset button
+            checkoutBtn.innerHTML = originalText;
+            checkoutBtn.disabled = false;
+            
+            // Show payment modal
+            openPaymentModal();
+        }, 1500);
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+        // Remove existing notification
+        const existingNotification = document.querySelector('.cart-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        // Create notification
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'info'} cart-notification position-fixed`;
+        notification.style.top = '100px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    // Select all items
+    function selectAllItems(selectAllCheckbox) {
+        const isChecked = selectAllCheckbox.checked;
+        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+        updateCartSummary();
+    }
+</script>
+{% endblock %}

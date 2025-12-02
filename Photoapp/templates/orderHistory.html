@@ -1,0 +1,851 @@
+{% extends "base.html" %}
+
+{% block title %}Order History - PhotoVault{% endblock %}
+
+{% block auth_buttons %}
+    <button class="btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline">Log Out</span>
+    </button>
+{% endblock %}
+
+{% block sidebar %}
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Gallery</h6>
+            <a href="{% url 'client' %}" class="sidebar-link">
+                <i class="fas fa-images"></i>
+                <span>Preview/Purchased</span>
+            </a>
+            <a href="{% url 'cart' %}" class="sidebar-link">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Cart</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="sidebar-cart-count">0</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Orders</h6>
+            <a href="{% url 'trackOrder' %}" class="sidebar-link">
+                <i class="fas fa-shipping-fast"></i>
+                <span>Track Order</span>
+                <span class="badge bg-info rounded-pill ms-auto">3</span>
+            </a>
+            <a href="{% url 'orderHistory' %}" class="sidebar-link active">
+                <i class="fas fa-history"></i>
+                <span>Order History</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Account</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-user-cog"></i>
+                <span>Profile Settings</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-credit-card"></i>
+                <span>Payment Methods</span>
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Order History Header -->
+    <div class="history-header bg-pv-very-light py-4 px-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="h2 mb-0 text-pv-deep">
+                    <i class="fas fa-history me-2"></i>
+                    Order History
+                </h1>
+                <p class="text-muted mb-0 mt-2">View all your past orders and invoices</p>
+            </div>
+            <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                <div class="dropdown">
+                    <button class="btn btn-pv-outline dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-filter me-2"></i>
+                        Filter
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('all')">All Orders</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('digital')">Digital Only</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('prints')">Prints Only</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('last-month')">Last 30 Days</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('last-year')">Last Year</a></li>
+                    </ul>
+                </div>
+                <button class="sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Summary -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3 col-6">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon mb-3">
+                        <i class="fas fa-shopping-bag fa-2x text-pv-light"></i>
+                    </div>
+                    <h3 class="stat-number">12</h3>
+                    <p class="stat-label text-muted">Total Orders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon mb-3">
+                        <i class="fas fa-dollar-sign fa-2x text-success"></i>
+                    </div>
+                    <h3 class="stat-number">$489.50</h3>
+                    <p class="stat-label text-muted">Total Spent</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon mb-3">
+                        <i class="fas fa-print fa-2x text-info"></i>
+                    </div>
+                    <h3 class="stat-number">8</h3>
+                    <p class="stat-label text-muted">Print Orders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="stat-icon mb-3">
+                        <i class="fas fa-download fa-2x text-warning"></i>
+                    </div>
+                    <h3 class="stat-number">15</h3>
+                    <p class="stat-label text-muted">Digital Downloads</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card mb-4">
+        <div class="card-header bg-pv-very-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Orders</h5>
+            <div class="d-flex gap-2">
+                <input type="text" class="form-control form-control-sm" placeholder="Search orders..." style="width: 200px;" id="order-search">
+                <button class="btn btn-pv-primary btn-sm" onclick="exportHistory()">
+                    <i class="fas fa-file-export me-1"></i>
+                    Export
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr class="bg-pv-very-light">
+                            <th class="ps-4">Order #</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Items</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-table">
+                        <!-- Order 1 -->
+                        <tr class="order-row" data-type="digital" data-date="2024-01-15">
+                            <td class="ps-4">
+                                <strong>PV-2024-005</strong>
+                            </td>
+                            <td>
+                                Jan 15, 2024
+                                <div class="text-muted small">10:30 AM</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">Digital</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="order-thumb me-2">
+                                        <img src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
+                                             alt="Wedding Photo" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">Wedding Portrait</div>
+                                        <small class="text-muted">1 item</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-bold">$29.99</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Completed</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2024-005')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2024-005')">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </button>
+                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2024-005')">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Order 2 -->
+                        <tr class="order-row" data-type="print" data-date="2024-01-10">
+                            <td class="ps-4">
+                                <strong>PV-2024-004</strong>
+                            </td>
+                            <td>
+                                Jan 10, 2024
+                                <div class="text-muted small">2:45 PM</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning text-dark">Print</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="order-thumb me-2">
+                                        <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
+                                             alt="Landscape" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">Mountain Landscape</div>
+                                        <small class="text-muted">2 items • 8x10 prints</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-bold">$45.98</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Delivered</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2024-004')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2024-004')">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </button>
+                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2024-004')">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Order 3 -->
+                        <tr class="order-row" data-type="digital" data-date="2024-01-05">
+                            <td class="ps-4">
+                                <strong>PV-2024-003</strong>
+                            </td>
+                            <td>
+                                Jan 5, 2024
+                                <div class="text-muted small">9:15 AM</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">Digital</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="order-thumb me-2">
+                                        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
+                                             alt="Portrait" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">Family Portrait</div>
+                                        <small class="text-muted">1 item • Commercial license</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-bold">$39.99</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Completed</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2024-003')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2024-003')">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </button>
+                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2024-003')">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Order 4 -->
+                        <tr class="order-row" data-type="print" data-date="2023-12-28">
+                            <td class="ps-4">
+                                <strong>PV-2023-156</strong>
+                            </td>
+                            <td>
+                                Dec 28, 2023
+                                <div class="text-muted small">11:30 AM</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning text-dark">Print</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="order-thumb me-2">
+                                        <img src="https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
+                                             alt="Cityscape" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">City Skyline</div>
+                                        <small class="text-muted">3 items • Framed prints</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-bold">$127.97</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Delivered</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2023-156')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2023-156')">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </button>
+                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2023-156')">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Order 5 -->
+                        <tr class="order-row" data-type="digital" data-date="2023-12-20">
+                            <td class="ps-4">
+                                <strong>PV-2023-155</strong>
+                            </td>
+                            <td>
+                                Dec 20, 2023
+                                <div class="text-muted small">3:20 PM</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">Digital</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="order-thumb me-2">
+                                        <img src="https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
+                                             alt="Product" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">Product Photos</div>
+                                        <small class="text-muted">4 items</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-bold">$79.96</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Completed</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2023-155')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2023-155')">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </button>
+                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2023-155')">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-pv-very-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    Showing <span id="showing-count">5</span> of 12 orders
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal Trigger -->
+    <div class="d-none">
+        <div id="orderDetailsModal" class="modal fade">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <!-- Modal content will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spending Analysis -->
+    <div class="card mb-4">
+        <div class="card-header bg-pv-very-light">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-pie me-2"></i>
+                Spending Analysis
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="mb-3">Order Type Distribution</h6>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="orderTypeChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="mb-3">Monthly Spending</h6>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="monthlySpendingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="mb-3">Top Purchases</h6>
+                    <div class="list-group">
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-camera me-2 text-pv-light"></i>
+                                <span>Wedding Photography Package</span>
+                            </div>
+                            <span class="badge bg-pv-light rounded-pill">$189.99</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-print me-2 text-pv-light"></i>
+                                <span>Framed Landscape Prints (Set of 3)</span>
+                            </div>
+                            <span class="badge bg-pv-light rounded-pill">$127.97</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-download me-2 text-pv-light"></i>
+                                <span>Digital Commercial License Bundle</span>
+                            </div>
+                            <span class="badge bg-pv-light rounded-pill">$79.96</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header bg-pv-very-light">
+            <h5 class="mb-0">
+                <i class="fas fa-bolt me-2"></i>
+                Quick Actions
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="window.location.href='{% url "client" %};'">
+                        <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                        <div>Shop More Photos</div>
+                    </button>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="downloadAllInvoices()">
+                        <i class="fas fa-file-archive fa-2x mb-2"></i>
+                        <div>Download All Invoices</div>
+                    </button>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="contactSupport()">
+                        <i class="fas fa-headset fa-2x mb-2"></i>
+                        <div>Contact Support</div>
+                    </button>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="leaveReview()">
+                        <i class="fas fa-star fa-2x mb-2"></i>
+                        <div>Leave Review</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Order History specific styles */
+    .history-header {
+        border-bottom: 2px solid var(--pv-light-green);
+    }
+
+    .stat-icon {
+        color: var(--pv-light-green);
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        line-height: 1;
+        margin: 10px 0;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    .order-row:hover {
+        background-color: var(--pv-very-light-green);
+        cursor: pointer;
+    }
+
+    .order-thumb {
+        width: 40px;
+        height: 30px;
+        border-radius: 4px;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .order-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+    }
+
+    .chart-container {
+        position: relative;
+    }
+
+    .list-group-item {
+        border-color: var(--border-color);
+        background-color: var(--bg-surface);
+    }
+
+    /* Badge colors */
+    .badge.bg-info {
+        background-color: #17a2b8 !important;
+    }
+
+    .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+
+    .badge.bg-success {
+        background-color: var(--pv-light-green) !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .history-header {
+            padding: 20px 15px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.9rem;
+        }
+        
+        .btn-group-sm .btn {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.8rem;
+        }
+        
+        .order-thumb {
+            width: 30px;
+            height: 25px;
+        }
+    }
+</style>
+
+<script>
+    // Load Chart.js from CDN
+    const chartScript = document.createElement('script');
+    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    chartScript.onload = initializeCharts;
+    document.head.appendChild(chartScript);
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCartFromStorage();
+        updateOrderCount();
+        
+        // Initialize search functionality
+        document.getElementById('order-search').addEventListener('input', function(e) {
+            searchOrders(e.target.value);
+        });
+    });
+
+    // Initialize charts
+    function initializeCharts() {
+        // Order Type Chart
+        const typeCtx = document.getElementById('orderTypeChart').getContext('2d');
+        new Chart(typeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Digital', 'Prints', 'Framed'],
+                datasets: [{
+                    data: [7, 3, 2],
+                    backgroundColor: [
+                        'rgba(76, 175, 80, 0.8)',
+                        'rgba(33, 150, 243, 0.8)',
+                        'rgba(255, 193, 7, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Monthly Spending Chart
+        const spendingCtx = document.getElementById('monthlySpendingChart').getContext('2d');
+        new Chart(spendingCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Oct', 'Nov', 'Dec', 'Jan'],
+                datasets: [{
+                    label: 'Spending ($)',
+                    data: [89.97, 156.45, 207.98, 125.50],
+                    backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Update order count
+    function updateOrderCount() {
+        const showingCount = document.querySelectorAll('.order-row:not(.d-none)').length;
+        const totalCount = document.querySelectorAll('.order-row').length;
+        document.getElementById('showing-count').textContent = showingCount;
+    }
+
+    // Filter orders
+    function filterOrders(filter) {
+        const rows = document.querySelectorAll('.order-row');
+        let count = 0;
+        
+        rows.forEach(row => {
+            let show = true;
+            
+            switch(filter) {
+                case 'digital':
+                    show = row.dataset.type === 'digital';
+                    break;
+                case 'prints':
+                    show = row.dataset.type === 'print';
+                    break;
+                case 'last-month':
+                    const rowDate = new Date(row.dataset.date);
+                    const monthAgo = new Date();
+                    monthAgo.setMonth(monthAgo.getMonth() - 1);
+                    show = rowDate >= monthAgo;
+                    break;
+                case 'last-year':
+                    const rowDateYear = new Date(row.dataset.date);
+                    const yearAgo = new Date();
+                    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+                    show = rowDateYear >= yearAgo;
+                    break;
+                default:
+                    // 'all' - show all
+            }
+            
+            row.classList.toggle('d-none', !show);
+            if (show) count++;
+        });
+        
+        updateOrderCount();
+        showNotification(`Showing ${count} orders`, 'info');
+    }
+
+    // Search orders
+    function searchOrders(query) {
+        const rows = document.querySelectorAll('.order-row');
+        let count = 0;
+        
+        rows.forEach(row => {
+            const orderNumber = row.querySelector('strong').textContent;
+            const orderDate = row.cells[1].textContent;
+            const orderType = row.cells[2].textContent;
+            const orderItems = row.cells[3].textContent;
+            const orderAmount = row.cells[4].textContent;
+            
+            const searchText = (orderNumber + orderDate + orderType + orderItems + orderAmount).toLowerCase();
+            const show = searchText.includes(query.toLowerCase());
+            
+            row.classList.toggle('d-none', !show);
+            if (show) count++;
+        });
+        
+        updateOrderCount();
+    }
+
+    // View order details
+    function viewOrderDetails(orderId) {
+        showNotification(`Loading details for order ${orderId}...`, 'info');
+        // In a real app, this would open a modal with order details
+        // openOrderDetailsModal(orderId);
+    }
+
+    // Download invoice
+    function downloadInvoice(orderId) {
+        showNotification(`Downloading invoice for ${orderId}...`, 'info');
+        // Simulate download
+        setTimeout(() => {
+            showNotification(`Invoice ${orderId}.pdf downloaded`, 'success');
+        }, 1000);
+    }
+
+    // Reorder
+    function reorder(orderId) {
+        if (confirm(`Add all items from order ${orderId} to cart?`)) {
+            showNotification(`Adding items from ${orderId} to cart...`, 'info');
+            
+            // Simulate adding to cart
+            setTimeout(() => {
+                showNotification(`Items from ${orderId} added to cart`, 'success');
+                // In a real app, this would add items to cart and redirect
+                // window.location.href = "{% url 'cart' %}";
+            }, 1000);
+        }
+    }
+
+    // Export history
+    function exportHistory() {
+        showNotification('Preparing export...', 'info');
+        
+        // Simulate export
+        setTimeout(() => {
+            showNotification('Order history exported successfully (orders.csv)', 'success');
+        }, 1500);
+    }
+
+    // Download all invoices
+    function downloadAllInvoices() {
+        if (confirm('Download all invoices as a ZIP file?')) {
+            showNotification('Preparing invoice archive...', 'info');
+            
+            setTimeout(() => {
+                showNotification('Invoice archive downloaded (invoices.zip)', 'success');
+            }, 2000);
+        }
+    }
+
+    // Contact support
+    function contactSupport() {
+        showNotification('Opening support ticket...', 'info');
+        // In a real app, this would open a support form
+    }
+
+    // Leave review
+    function leaveReview() {
+        showNotification('Opening review form...', 'info');
+        // In a real app, this would open a review modal
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} notification position-fixed`;
+        notification.style.top = '100px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    // Load cart from storage (for sidebar count)
+    function loadCartFromStorage() {
+        const savedCart = localStorage.getItem('photovault_cart');
+        if (savedCart) {
+            const cartItems = JSON.parse(savedCart);
+            const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
+            document.getElementById('sidebar-cart-count').textContent = totalItems;
+        }
+    }
+</script>
+{% endblock %}

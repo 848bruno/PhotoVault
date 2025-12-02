@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Secure Photo Delivery Platform{% endblock %}
+
+{% block auth_buttons %}
+    <a href="{% url 'login' %}" class="btn-auth btn-login me-2 d-none d-md-inline">Login</a>
+    <a href="{% url 'register' %}" class="btn-auth btn-register d-none d-md-inline">Register</a>
+    <div class="dropdown d-md-none">
+        <button class="btn btn-pv-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="fas fa-user"></i>
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'login' %}">Login</a></li>
+            <li><a class="dropdown-item" href="{% url 'register' %}">Register</a></li>
+        </ul>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <section class="hero-section" id="home">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10 text-center animate-fade-in-up">
+                    <h1 class="display-3 fw-bold mb-4">Your Photos, Perfectly Delivered</h1>
+                    <p class="lead mb-5">A professional platform connecting photographers with clients for secure, beautiful photo delivery and high-quality prints.</p>
+                    <div class="d-flex flex-wrap justify-content-center gap-3">
+                        <a href="{% url 'register' %}" class="btn-pv-primary btn-lg px-5 py-3">
+                            <i class="fas fa-rocket me-2"></i>Get Started Free
+                        </a>
+                        <a href="#services" class="btn-pv-outline btn-lg px-5 py-3">
+                            <i class="fas fa-play-circle me-2"></i>Watch Demo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="py-5 bg-pv-very-light">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stats-counter">
+                        <span class="stats-number">10,000+</span>
+                        <span class="stats-label">Photos Delivered</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stats-counter">
+                        <span class="stats-number">2,500+</span>
+                        <span class="stats-label">Happy Clients</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stats-counter">
+                        <span class="stats-number">500+</span>
+                        <span class="stats-label">Photographers</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="stats-counter">
+                        <span class="stats-number">99.9%</span>
+                        <span class="stats-label">Satisfaction Rate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Us Section -->
+    <section class="py-5" id="about">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-5 mb-lg-0">
+                    <h2 class="display-5 fw-bold mb-4 text-pv-deep">About PhotoVault</h2>
+                    <p class="lead mb-4">We're revolutionizing how photographers deliver their work to clients. Founded by photographers for photographers, our platform combines cutting-edge technology with a deep understanding of creative workflows.</p>
+                    <p class="mb-4">PhotoVault provides a seamless experience from photo upload to client delivery, with secure payments, professional printing services, and comprehensive order tracking all in one place.</p>
+                    <div class="d-flex gap-3">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-award fa-2x text-pv-light mb-3"></i>
+                            <h5>Award Winning</h5>
+                            <p>Best Photo Platform 2023</p>
+                        </div>
+                        <div class="feature-icon-small">
+                            <i class="fas fa-shield-alt fa-2x text-pv-light mb-3"></i>
+                            <h5>Secure & Trusted</h5>
+                            <p>GDPR Compliant</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card overflow-hidden border-0 shadow-lg">
+                        <img src="https://images.unsplash.com/photo-1554048612-b6a482bc67e5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                             alt="Photographer at work" class="img-fluid rounded">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="py-5 section-bg text-white" id="services" 
+             style="background-image: url('https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')">
+        <div class="container">
+            <div class="section-content">
+                <h2 class="display-5 fw-bold mb-5 text-center text-white">Our Services</h2>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <h4 class="mb-3">Secure Photo Upload</h4>
+                            <p>Upload high-resolution photos with automatic optimization. Organize by client, event, or project.</p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Unlimited storage</li>
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Auto-backup</li>
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Batch processing</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <h4 class="mb-3">Client Gallery & Sales</h4>
+                            <p>Beautiful galleries for clients to view, select, and purchase photos with one-click downloads.</p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Custom pricing</li>
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Watermark protection</li>
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Instant delivery</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fas fa-print"></i>
+                            </div>
+                            <h4 class="mb-3">Professional Printing</h4>
+                            <p>High-quality prints delivered worldwide. Multiple sizes, papers, and framing options available.</p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Archival quality</li>
+                                <li><i class="fas fa-check text-pv-light me-2"></i>Global shipping</li>
+                                <li><i class="fas fa-check text-pv-light me-2"></i>White-label packaging</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="py-5 bg-pv-very-light">
+        <div class="container">
+            <h2 class="display-5 fw-bold mb-5 text-center">How It Works</h2>
+            <div class="row">
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="text-center p-4">
+                        <div class="rounded-circle bg-pv-light d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 80px; height: 80px;">
+                            <span class="text-white h3 mb-0">1</span>
+                        </div>
+                        <h4>Upload Photos</h4>
+                        <p>Photographers upload photos to private client galleries</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="text-center p-4">
+                        <div class="rounded-circle bg-pv-light d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 80px; height: 80px;">
+                            <span class="text-white h3 mb-0">2</span>
+                        </div>
+                        <h4>Client Review</h4>
+                        <p>Clients receive notification to view and select photos</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="text-center p-4">
+                        <div class="rounded-circle bg-pv-light d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 80px; height: 80px;">
+                            <span class="text-white h3 mb-0">3</span>
+                        </div>
+                        <h4>Secure Payment</h4>
+                        <p>Clients purchase digital copies or prints with secure payment</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="text-center p-4">
+                        <div class="rounded-circle bg-pv-light d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 80px; height: 80px;">
+                            <span class="text-white h3 mb-0">4</span>
+                        </div>
+                        <h4>Instant Delivery</h4>
+                        <p>Digital downloads instantly, prints shipped within 48 hours</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="py-5" id="contact">
+        <div class="container">
+            <h2 class="display-5 fw-bold mb-5 text-center text-pv-deep">Get In Touch</h2>
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="contact-form">
+                        <h3 class="mb-4">Send us a Message</h3>
+                        <form>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Your Name</label>
+                                    <input type="text" class="form-control" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Subject</label>
+                                <input type="text" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Message</label>
+                                <textarea class="form-control" rows="5" required></textarea>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn-pv-primary btn-lg">Send Message</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-md-4 text-center mb-4">
+                    <div class="p-4">
+                        <i class="fas fa-map-marker-alt fa-2x text-pv-light mb-3"></i>
+                        <h5>Office Location</h5>
+                        <p class="text-muted">123 Creative Street<br>San Francisco, CA 94107</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-4">
+                    <div class="p-4">
+                        <i class="fas fa-phone fa-2x text-pv-light mb-3"></i>
+                        <h5>Contact Phone</h5>
+                        <p class="text-muted">+1 (555) 123-4567<br>Mon-Fri, 9am-6pm PST</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-4">
+                    <div class="p-4">
+                        <i class="fas fa-envelope fa-2x text-pv-light mb-3"></i>
+                        <h5>Email Address</h5>
+                        <p class="text-muted">support@photovault.com<br>sales@photovault.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-5 bg-pv-deep text-white">
+        <div class="container text-center">
+            <h2 class="display-5 fw-bold mb-4">Ready to Transform Your Photo Delivery?</h2>
+            <p class="lead mb-5">Join thousands of photographers who trust PhotoVault for their business.</p>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="{% url 'register' %}" class="btn-pv-primary btn-lg px-5 py-3 bg-white text-pv-deep">
+                    <i class="fas fa-user-plus me-2"></i>Start Free Trial
+                </a>
+                <a href="#" class="btn-pv-outline btn-lg px-5 py-3 text-white border-white">
+                    <i class="fas fa-calendar-alt me-2"></i>Schedule Demo
+                </a>
+            </div>
+        </div>
+    </section>
+{% endblock %}

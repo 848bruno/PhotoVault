@@ -1,0 +1,964 @@
+{% extends "base.html" %}
+
+{% block title %}Client Portal - My Photos{% endblock %}
+
+{% block auth_buttons %}
+    <button class="btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline">Log Out</span>
+    </button>
+{% endblock %}
+
+{% block sidebar %}
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Gallery</h6>
+            <a href="{% url 'client' %}" class="sidebar-link active">
+                <i class="fas fa-images"></i>
+                <span>Preview/Purchased</span>
+            </a>
+            <a href="{% url 'cart' %}" class="sidebar-link">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Cart</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="sidebar-cart-count">0</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Orders</h6>
+            <a href="{% url 'trackOrder' %}" class="sidebar-link">
+                <i class="fas fa-shipping-fast"></i>
+                <span>Track Order</span>
+            </a>
+            <a href="{% url 'orderHistory' %}" class="sidebar-link">
+                <i class="fas fa-history"></i>
+                <span>Order History</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Account</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-user-cog"></i>
+                <span>Profile Settings</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-credit-card"></i>
+                <span>Payment Methods</span>
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Gallery Header -->
+    <div class="gallery-header bg-pv-very-light py-4 px-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <h1 class="h2 mb-0 text-pv-deep">
+                <i class="fas fa-images me-2"></i>
+                My Photo Gallery
+            </h1>
+            <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-pv-outline btn-sm active" onclick="filterPhotos('all')">
+                        All Photos
+                    </button>
+                    <button type="button" class="btn btn-pv-outline btn-sm" onclick="filterPhotos('preview')">
+                        Preview Only
+                    </button>
+                    <button type="button" class="btn btn-pv-outline btn-sm" onclick="filterPhotos('purchased')">
+                        Purchased Only
+                    </button>
+                </div>
+                <button class="sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Photos Section -->
+    <div class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="text-contrast">
+                <i class="fas fa-eye me-2 text-pv-light"></i>
+                Preview Photos
+                <span class="badge bg-secondary ms-2" id="preview-count">6 photos</span>
+            </h3>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn-pv-outline btn-sm" onclick="selectAllPreview()">
+                    <i class="fas fa-check-square me-1"></i>
+                    Select All
+                </button>
+                <button class="btn-pv-primary btn-sm" onclick="addSelectedToCart()">
+                    <i class="fas fa-cart-plus me-1"></i>
+                    Add to Cart
+                </button>
+            </div>
+        </div>
+        
+        <p class="text-muted mb-4">These photos are available for purchase. Add them to your cart to buy digital copies or order physical prints.</p>
+        
+        <div class="row g-4" id="preview-photos">
+            <!-- Preview Photo 1 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100" data-type="preview">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Wedding Photo" class="card-img-top">
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <div class="form-check">
+                                <input class="form-check-input photo-checkbox" type="checkbox" value="1">
+                            </div>
+                        </div>
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning text-dark">Preview</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Wedding Ceremony</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 15, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Wedding<br>
+                            <i class="fas fa-camera me-1"></i>Resolution: 8K (7680×4320)
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="price-section">
+                                <span class="text-pv-light fw-bold h5 mb-0">$29.99</span>
+                                <small class="text-muted d-block">Digital Copy</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
+                                    <i class="fas fa-shopping-cart me-1"></i>
+                                    Add
+                                </button>
+                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
+                                    <i class="fas fa-bolt me-1"></i>
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Photo 2 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100" data-type="preview">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Portrait Photo" class="card-img-top">
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <div class="form-check">
+                                <input class="form-check-input photo-checkbox" type="checkbox" value="2">
+                            </div>
+                        </div>
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning text-dark">Preview</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Family Portrait</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 14, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Portrait<br>
+                            <i class="fas fa-camera me-1"></i>Resolution: 4K (3840×2160)
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="price-section">
+                                <span class="text-pv-light fw-bold h5 mb-0">$24.99</span>
+                                <small class="text-muted d-block">Digital Copy</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
+                                    <i class="fas fa-shopping-cart me-1"></i>
+                                    Add
+                                </button>
+                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
+                                    <i class="fas fa-bolt me-1"></i>
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Photo 3 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100" data-type="preview">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Mountain Photo" class="card-img-top">
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <div class="form-check">
+                                <input class="form-check-input photo-checkbox" type="checkbox" value="3">
+                            </div>
+                        </div>
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning text-dark">Preview</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Mountain Landscape</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 13, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Landscape<br>
+                            <i class="fas fa-camera me-1"></i>Resolution: 6K (6144×3456)
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="price-section">
+                                <span class="text-pv-light fw-bold h5 mb-0">$19.99</span>
+                                <small class="text-muted d-block">Digital Copy</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
+                                    <i class="fas fa-shopping-cart me-1"></i>
+                                    Add
+                                </button>
+                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
+                                    <i class="fas fa-bolt me-1"></i>
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Photo 4 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100" data-type="preview">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Event Photo" class="card-img-top">
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <div class="form-check">
+                                <input class="form-check-input photo-checkbox" type="checkbox" value="4">
+                            </div>
+                        </div>
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning text-dark">Preview</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Corporate Event</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 12, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Event<br>
+                            <i class="fas fa-camera me-1"></i>Resolution: 4K (3840×2160)
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="price-section">
+                                <span class="text-pv-light fw-bold h5 mb-0">$22.99</span>
+                                <small class="text-muted d-block">Digital Copy</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
+                                    <i class="fas fa-shopping-cart me-1"></i>
+                                    Add
+                                </button>
+                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
+                                    <i class="fas fa-bolt me-1"></i>
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Photo 5 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100" data-type="preview">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Product Photo" class="card-img-top">
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <div class="form-check">
+                                <input class="form-check-input photo-checkbox" type="checkbox" value="5">
+                            </div>
+                        </div>
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning text-dark">Preview</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Product Showcase</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 11, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Product<br>
+                            <i class="fas fa-camera me-1"></i>Resolution: 8K (7680×4320)
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="price-section">
+                                <span class="text-pv-light fw-bold h5 mb-0">$27.99</span>
+                                <small class="text-muted d-block">Digital Copy</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
+                                    <i class="fas fa-shopping-cart me-1"></i>
+                                    Add
+                                </button>
+                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
+                                    <i class="fas fa-bolt me-1"></i>
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Photo 6 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100" data-type="preview">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1554048612-b6a482bc67e5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Nature Photo" class="card-img-top">
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <div class="form-check">
+                                <input class="form-check-input photo-checkbox" type="checkbox" value="6">
+                            </div>
+                        </div>
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-warning text-dark">Preview</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Nature Scene</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 10, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Nature<br>
+                            <i class="fas fa-camera me-1"></i>Resolution: 5K (5120×2880)
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="price-section">
+                                <span class="text-pv-light fw-bold h5 mb-0">$17.99</span>
+                                <small class="text-muted d-block">Digital Copy</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
+                                    <i class="fas fa-shopping-cart me-1"></i>
+                                    Add
+                                </button>
+                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
+                                    <i class="fas fa-bolt me-1"></i>
+                                    Buy Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchased Photos Section -->
+    <div class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="text-contrast">
+                <i class="fas fa-check-circle me-2 text-success"></i>
+                Purchased Photos
+                <span class="badge bg-success ms-2" id="purchased-count">4 photos</span>
+            </h3>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn-pv-primary btn-sm" onclick="openOrderModal()">
+                    <i class="fas fa-print me-1"></i>
+                    Order Prints
+                </button>
+            </div>
+        </div>
+        
+        <p class="text-muted mb-4">These photos have been purchased and are available for download. You can also order physical prints.</p>
+        
+        <div class="row g-4" id="purchased-photos">
+            <!-- Purchased Photo 1 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100 purchased" data-type="purchased">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Sunset Photo" class="card-img-top">
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check me-1"></i>
+                                Purchased
+                            </span>
+                        </div>
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-info">Digital</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Sunset Over Ocean</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Jan 5, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Landscape<br>
+                            <i class="fas fa-download me-1"></i>Downloads: 2
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="download-info">
+                                <small class="text-success d-block">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    License: Personal Use
+                                </small>
+                                <small class="text-muted">Expires: Never</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
+                                    <i class="fas fa-download me-1"></i>
+                                    Download
+                                </button>
+                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
+                                    <i class="fas fa-print me-1"></i>
+                                    Print
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchased Photo 2 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100 purchased" data-type="purchased">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Portrait Photo" class="card-img-top">
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check me-1"></i>
+                                Purchased
+                            </span>
+                        </div>
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-info">Digital</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Professional Headshot</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Jan 3, 2024<br>
+                            <i class="fas fa-tag me-1"></i>Category: Portrait<br>
+                            <i class="fas fa-download me-1"></i>Downloads: 1
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="download-info">
+                                <small class="text-success d-block">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    License: Commercial Use
+                                </small>
+                                <small class="text-muted">Expires: Jan 3, 2025</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
+                                    <i class="fas fa-download me-1"></i>
+                                    Download
+                                </button>
+                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
+                                    <i class="fas fa-print me-1"></i>
+                                    Print
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchased Photo 3 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100 purchased" data-type="purchased">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="City Photo" class="card-img-top">
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check me-1"></i>
+                                Purchased
+                            </span>
+                        </div>
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-info">Digital</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">City Skyline</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Dec 28, 2023<br>
+                            <i class="fas fa-tag me-1"></i>Category: Urban<br>
+                            <i class="fas fa-download me-1"></i>Downloads: 3
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="download-info">
+                                <small class="text-success d-block">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    License: Personal Use
+                                </small>
+                                <small class="text-muted">Expires: Never</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
+                                    <i class="fas fa-download me-1"></i>
+                                    Download
+                                </button>
+                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
+                                    <i class="fas fa-print me-1"></i>
+                                    Print
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchased Photo 4 -->
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="photo-card card h-100 purchased" data-type="purchased">
+                    <div class="position-relative">
+                        <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                             alt="Wildlife Photo" class="card-img-top">
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check me-1"></i>
+                                Purchased
+                            </span>
+                        </div>
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-info">Digital</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Wildlife in Action</h5>
+                        <p class="card-text small text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Dec 25, 2023<br>
+                            <i class="fas fa-tag me-1"></i>Category: Wildlife<br>
+                            <i class="fas fa-download me-1"></i>Downloads: 2
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="download-info">
+                                <small class="text-success d-block">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    License: Personal Use
+                                </small>
+                                <small class="text-muted">Expires: Never</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
+                                    <i class="fas fa-download me-1"></i>
+                                    Download
+                                </button>
+                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
+                                    <i class="fas fa-print me-1"></i>
+                                    Print
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Preview (Floating) -->
+    <div class="cart-preview position-fixed bottom-0 end-0 m-4 d-none" id="cartPreview">
+        <div class="card shadow-lg" style="width: 300px;">
+            <div class="card-header bg-pv-deep text-white d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fas fa-shopping-cart me-1"></i>
+                    Cart Preview
+                </span>
+                <button class="btn btn-sm btn-outline-light" onclick="hideCartPreview()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="card-body p-3" id="cartPreviewItems">
+                <!-- Cart items will be added here dynamically -->
+                <p class="text-muted text-center mb-0">No items in cart</p>
+            </div>
+            <div class="card-footer bg-pv-very-light">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Subtotal:</span>
+                    <span class="fw-bold" id="cartPreviewSubtotal">$0.00</span>
+                </div>
+                <a href="{% url 'cart' %}" class="btn-pv-primary btn-sm w-100">
+                    <i class="fas fa-shopping-bag me-1"></i>
+                    View Cart
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Gallery-specific styles */
+    .gallery-header {
+        border-bottom: 2px solid var(--pv-light-green);
+    }
+
+    .photo-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .photo-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px var(--shadow-color);
+    }
+
+    .photo-card.purchased {
+        border-color: var(--pv-light-green);
+    }
+
+    .photo-checkbox:checked {
+        background-color: var(--pv-light-green);
+        border-color: var(--pv-light-green);
+    }
+
+    .price-section .text-pv-light {
+        color: var(--pv-light-green) !important;
+    }
+
+    /* Cart preview styles */
+    .cart-preview {
+        z-index: 1050;
+    }
+
+    .cart-item-mini {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .cart-item-mini:last-child {
+        border-bottom: none;
+    }
+
+    .cart-item-mini-img {
+        width: 50px;
+        height: 40px;
+        border-radius: 4px;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .cart-item-mini-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .cart-item-mini-details {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cart-item-mini-details h6 {
+        margin: 0;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .cart-item-mini-details small {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* Filter buttons */
+    .btn-group .btn.active {
+        background-color: var(--pv-light-green);
+        border-color: var(--pv-light-green);
+        color: white;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .gallery-header {
+            padding: 20px 15px;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+        }
+        
+        .btn-group .btn {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+        }
+        
+        .cart-preview {
+            position: fixed !important;
+            bottom: 10px !important;
+            right: 10px !important;
+            left: 10px !important;
+            width: auto !important;
+        }
+    }
+</style>
+
+<script>
+    // Cart management
+    let cartItems = [];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCounts();
+        loadCartFromStorage();
+        
+        // Add event listeners to checkboxes
+        document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateCounts);
+        });
+    });
+
+    // Update photo counts
+    function updateCounts() {
+        const previewCount = document.querySelectorAll('#preview-photos .photo-card').length;
+        const purchasedCount = document.querySelectorAll('#purchased-photos .photo-card').length;
+        const selectedCount = document.querySelectorAll('.photo-checkbox:checked').length;
+        
+        document.getElementById('preview-count').textContent = previewCount + ' photos';
+        document.getElementById('purchased-count').textContent = purchasedCount + ' photos';
+        
+        if (selectedCount > 0) {
+            document.querySelector('[onclick="addSelectedToCart()"]').innerHTML = 
+                `<i class="fas fa-cart-plus me-1"></i> Add ${selectedCount} to Cart`;
+        } else {
+            document.querySelector('[onclick="addSelectedToCart()"]').innerHTML = 
+                `<i class="fas fa-cart-plus me-1"></i> Add to Cart`;
+        }
+    }
+
+    // Filter photos
+    function filterPhotos(filter) {
+        const filterButtons = document.querySelectorAll('.btn-group .btn');
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        if (filter === 'all') {
+            document.querySelectorAll('.photo-card').forEach(card => {
+                card.style.display = 'block';
+            });
+        } else if (filter === 'preview') {
+            document.querySelectorAll('.photo-card').forEach(card => {
+                card.style.display = card.dataset.type === 'preview' ? 'block' : 'none';
+            });
+        } else if (filter === 'purchased') {
+            document.querySelectorAll('.photo-card').forEach(card => {
+                card.style.display = card.dataset.type === 'purchased' ? 'block' : 'none';
+            });
+        }
+    }
+
+    // Select all preview photos
+    function selectAllPreview() {
+        const checkboxes = document.querySelectorAll('#preview-photos .photo-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = !allChecked;
+        });
+        
+        updateCounts();
+    }
+
+    // Add individual photo to cart
+    function addToCart(button, type) {
+        const card = button.closest('.photo-card');
+        const title = card.querySelector('.card-title').textContent;
+        const price = card.querySelector('.text-pv-light').textContent.replace('$', '');
+        const imgSrc = card.querySelector('img').src;
+        
+        const cartItem = {
+            id: Date.now(),
+            title: title,
+            price: parseFloat(price),
+            type: type,
+            image: imgSrc,
+            quantity: 1
+        };
+        
+        // Check if item already in cart
+        const existingItem = cartItems.find(item => item.title === title && item.type === type);
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cartItems.push(cartItem);
+        }
+        
+        saveCartToStorage();
+        updateCartPreview();
+        showNotification(`${title} added to cart`, 'success');
+        
+        // Show cart preview
+        showCartPreview();
+    }
+
+    // Quick buy (add to cart and proceed to checkout)
+    function quickBuy(button, type) {
+        addToCart(button, type);
+        setTimeout(() => {
+            window.location.href = "{% url 'cart' %}";
+        }, 500);
+    }
+
+    // Add selected photos to cart
+    function addSelectedToCart() {
+        const selectedCheckboxes = document.querySelectorAll('.photo-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            showNotification('Please select photos to add to cart', 'warning');
+            return;
+        }
+        
+        selectedCheckboxes.forEach(checkbox => {
+            const card = checkbox.closest('.photo-card');
+            const button = card.querySelector('[onclick*="addToCart"]');
+            if (button) {
+                addToCart(button, 'digital');
+            }
+        });
+        
+        // Uncheck all checkboxes after adding
+        selectedCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        updateCounts();
+    }
+
+    // Download purchased photo
+    function downloadPhoto(button) {
+        const card = button.closest('.photo-card');
+        const title = card.querySelector('.card-title').textContent;
+        
+        // Show download modal or simulate download
+        showNotification(`Downloading "${title}"...`, 'info');
+        
+        // Simulate download delay
+        setTimeout(() => {
+            showNotification(`"${title}" downloaded successfully!`, 'success');
+        }, 1500);
+    }
+
+    // Order print of purchased photo
+    function orderPrint(button) {
+        openOrderModal();
+    }
+
+    // Show cart preview
+    function showCartPreview() {
+        const cartPreview = document.getElementById('cartPreview');
+        cartPreview.classList.remove('d-none');
+        
+        // Auto hide after 5 seconds
+        setTimeout(() => {
+            if (!cartPreview.matches(':hover')) {
+                hideCartPreview();
+            }
+        }, 5000);
+    }
+
+    // Hide cart preview
+    function hideCartPreview() {
+        document.getElementById('cartPreview').classList.add('d-none');
+    }
+
+    // Update cart preview
+    function updateCartPreview() {
+        const container = document.getElementById('cartPreviewItems');
+        const subtotalElement = document.getElementById('cartPreviewSubtotal');
+        const sidebarCount = document.getElementById('sidebar-cart-count');
+        
+        if (cartItems.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center mb-0">No items in cart</p>';
+            subtotalElement.textContent = '$0.00';
+            sidebarCount.textContent = '0';
+            return;
+        }
+        
+        // Calculate total items and subtotal
+        let totalItems = 0;
+        let subtotal = 0;
+        
+        cartItems.forEach(item => {
+            totalItems += item.quantity;
+            subtotal += item.price * item.quantity;
+        });
+        
+        // Update sidebar count
+        sidebarCount.textContent = totalItems;
+        
+        // Update preview items (show first 3 items)
+        let html = '';
+        const itemsToShow = cartItems.slice(0, 3);
+        
+        itemsToShow.forEach(item => {
+            html += `
+                <div class="cart-item-mini">
+                    <div class="cart-item-mini-img">
+                        <img src="${item.image}" alt="${item.title}">
+                    </div>
+                    <div class="cart-item-mini-details">
+                        <h6>${item.title}</h6>
+                        <small>${item.type === 'digital' ? 'Digital' : 'Print'} • $${item.price.toFixed(2)} × ${item.quantity}</small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (cartItems.length > 3) {
+            html += `<p class="text-center small text-muted mb-0">+${cartItems.length - 3} more items</p>`;
+        }
+        
+        container.innerHTML = html;
+        subtotalElement.textContent = '$' + subtotal.toFixed(2);
+    }
+
+    // Save cart to localStorage
+    function saveCartToStorage() {
+        localStorage.setItem('photovault_cart', JSON.stringify(cartItems));
+    }
+
+    // Load cart from localStorage
+    function loadCartFromStorage() {
+        const savedCart = localStorage.getItem('photovault_cart');
+        if (savedCart) {
+            cartItems = JSON.parse(savedCart);
+            updateCartPreview();
+        }
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+        // Remove existing notification
+        const existingNotification = document.querySelector('.gallery-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        // Create notification
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} gallery-notification position-fixed`;
+        notification.style.top = '100px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}

@@ -20,4 +20,14 @@ from Photoapp import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', views.index, name='home'),
+    path('client/', views.client, name='client'),
+    path('admin-page/', views.admin, name='admin'),
+    path('logout/', views.logout, name='logout'),
+    path('login/', views.login, name='login'),
+    path('register/', views.register, name='register'),
+    path('cart/', views.cart, name='cart'),
+    path('order-history/', views.orderHistory, name='orderHistory'),
+    path('track-order/', views.trackOrder, name='trackOrder'),
+    path('client-manage/', views.clientManage, name='clientManage'),
 ]

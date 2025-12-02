@@ -1,0 +1,1099 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - PhotoVault{% endblock %}
+
+{% block auth_buttons %}
+    <button class="btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline">Log Out</span>
+    </button>
+{% endblock %}
+
+{% block sidebar %}
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Dashboard</h6>
+            <a href="{% url 'admin' %}" class="sidebar-link active">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Overview</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Sales & Analytics</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Sales Analytics</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-chart-pie"></i>
+                <span>Revenue Reports</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Orders</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-shopping-bag"></i>
+                <span>All Orders</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="pending-orders-count">8</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-clock"></i>
+                <span>Pending Orders</span>
+                <span class="badge bg-warning rounded-pill ms-auto" id="pending-orders-badge">3</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Payments</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-credit-card"></i>
+                <span>Payment Processing</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-receipt"></i>
+                <span>Transactions</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Clients</h6>
+            <a href="{% url 'clientManage' %}" class="sidebar-link">
+                <i class="fas fa-users"></i>
+                <span>Client Management</span>
+            </a>
+            <a href="#" class="sidebar-link" onclick="openUploadModal()">
+                <i class="fas fa-user-plus"></i>
+                <span>Add New Client</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Content</h6>
+            <a href="#" class="sidebar-link" onclick="openUploadModal()">
+                <i class="fas fa-upload"></i>
+                <span>Upload Photos</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-photo-video"></i>
+                <span>Photo Library</span>
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header bg-pv-very-light py-4 px-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="h2 mb-0 text-pv-deep">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Admin Dashboard
+                </h1>
+                <p class="text-muted mb-0 mt-2">Welcome back, Admin! Here's what's happening with your business today.</p>
+            </div>
+            <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                <div class="dropdown">
+                    <button class="btn btn-pv-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Last 30 Days
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="setDateRange('today')">Today</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setDateRange('yesterday')">Yesterday</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setDateRange('last7')">Last 7 Days</a></li>
+                        <li><a class="dropdown-item active" href="#" onclick="setDateRange('last30')">Last 30 Days</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setDateRange('last90')">Last 90 Days</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setDateRange('custom')">Custom Range</a></li>
+                    </ul>
+                </div>
+                <button class="btn-pv-outline" onclick="refreshDashboard()">
+                    <i class="fas fa-sync-alt me-2"></i>
+                    Refresh
+                </button>
+                <button class="sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Cards -->
+    <div class="row mb-4 g-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-2">Total Revenue</h6>
+                            <h2 class="mb-0 text-pv-light" id="total-revenue">$4,256.80</h2>
+                            <div class="metric-change text-success">
+                                <i class="fas fa-arrow-up me-1"></i>
+                                <span id="revenue-change">12.5%</span> from last month
+                            </div>
+                        </div>
+                        <div class="metric-icon bg-pv-light">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-2">Total Orders</h6>
+                            <h2 class="mb-0" id="total-orders">124</h2>
+                            <div class="metric-change text-success">
+                                <i class="fas fa-arrow-up me-1"></i>
+                                <span id="orders-change">8.3%</span> from last month
+                            </div>
+                        </div>
+                        <div class="metric-icon bg-info">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-2">Active Clients</h6>
+                            <h2 class="mb-0" id="active-clients">58</h2>
+                            <div class="metric-change text-success">
+                                <i class="fas fa-arrow-up me-1"></i>
+                                <span id="clients-change">5.2%</span> from last month
+                            </div>
+                        </div>
+                        <div class="metric-icon bg-success">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card metric-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-muted mb-2">Avg. Order Value</h6>
+                            <h2 class="mb-0" id="avg-order-value">$34.33</h2>
+                            <div class="metric-change text-danger">
+                                <i class="fas fa-arrow-down me-1"></i>
+                                <span id="aov-change">2.1%</span> from last month
+                            </div>
+                        </div>
+                        <div class="metric-icon bg-warning">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4 g-4">
+        <!-- Revenue Chart -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-pv-very-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2 text-pv-light"></i>
+                        Revenue Overview
+                    </h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-pv-outline active" onclick="setRevenueChart('daily')">Daily</button>
+                        <button type="button" class="btn btn-pv-outline" onclick="setRevenueChart('weekly')">Weekly</button>
+                        <button type="button" class="btn btn-pv-outline" onclick="setRevenueChart('monthly')">Monthly</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Types Distribution -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-pv-very-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2 text-pv-light"></i>
+                        Order Types
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="orderTypeChart"></canvas>
+                    </div>
+                    <div class="row mt-3 text-center">
+                        <div class="col-4">
+                            <div class="stat-small">
+                                <div class="stat-number text-pv-light">68%</div>
+                                <div class="stat-label">Digital</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-small">
+                                <div class="stat-number text-info">25%</div>
+                                <div class="stat-label">Prints</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-small">
+                                <div class="stat-number text-warning">7%</div>
+                                <div class="stat-label">Framed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders & Top Products -->
+    <div class="row mb-4 g-4">
+        <!-- Recent Orders Table -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-pv-very-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2 text-pv-light"></i>
+                        Recent Orders
+                        <span class="badge bg-warning ms-2">3 Pending</span>
+                    </h5>
+                    <a href="#" class="btn btn-pv-outline btn-sm">
+                        View All Orders
+                        <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr class="bg-pv-very-light">
+                                    <th class="ps-4">Order ID</th>
+                                    <th>Client</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th class="pe-4 text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="ps-4">
+                                        <strong>#PV-2024-012</strong>
+                                        <div class="text-muted small">New order</div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="client-avatar me-2">
+                                                <i class="fas fa-user-circle"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">Sarah Johnson</div>
+                                                <small class="text-muted">sarah@email.com</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>Today, 10:30 AM</td>
+                                    <td>
+                                        <span class="fw-bold text-pv-light">$45.99</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <button class="btn btn-sm btn-pv-outline" onclick="processOrder('PV-2024-012')">
+                                            Process
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td class="ps-4">
+                                        <strong>#PV-2024-011</strong>
+                                        <div class="text-muted small">Digital purchase</div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="client-avatar me-2">
+                                                <i class="fas fa-user-circle"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">Michael Chen</div>
+                                                <small class="text-muted">michael@email.com</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>Yesterday, 3:45 PM</td>
+                                    <td>
+                                        <span class="fw-bold text-pv-light">$29.99</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">Completed</span>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <button class="btn btn-sm btn-pv-outline" onclick="viewOrder('PV-2024-011')">
+                                            View
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td class="ps-4">
+                                        <strong>#PV-2024-010</strong>
+                                        <div class="text-muted small">Print order</div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="client-avatar me-2">
+                                                <i class="fas fa-user-circle"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">Robert Wilson</div>
+                                                <small class="text-muted">robert@email.com</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>Jan 14, 2024</td>
+                                    <td>
+                                        <span class="fw-bold text-pv-light">$89.97</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">Shipped</span>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <button class="btn btn-sm btn-pv-outline" onclick="trackOrder('PV-2024-010')">
+                                            Track
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td class="ps-4">
+                                        <strong>#PV-2024-009</strong>
+                                        <div class="text-muted small">Bulk purchase</div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="client-avatar me-2">
+                                                <i class="fas fa-user-circle"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-medium">Emma Davis</div>
+                                                <small class="text-muted">emma@email.com</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>Jan 13, 2024</td>
+                                    <td>
+                                        <span class="fw-bold text-pv-light">$156.45</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">Processing</span>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <button class="btn btn-sm btn-pv-outline" onclick="processOrder('PV-2024-009')">
+                                            Process
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Products -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-pv-very-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-star me-2 text-pv-light"></i>
+                        Top Selling Photos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="top-products-list">
+                        <div class="top-product-item">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="product-thumb me-3">
+                                    <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=60&q=80" 
+                                         alt="Wedding Photo" class="rounded">
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">Wedding Ceremony #1</h6>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Wedding Category</small>
+                                        <span class="badge bg-pv-light">$29.99</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-stats">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Sales:</span>
+                                    <strong>24 units</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Revenue:</span>
+                                    <strong class="text-pv-light">$719.76</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="top-product-item">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="product-thumb me-3">
+                                    <img src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=60&q=80" 
+                                         alt="Portrait Photo" class="rounded">
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">Family Portrait</h6>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Portrait Category</small>
+                                        <span class="badge bg-pv-light">$24.99</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-stats">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Sales:</span>
+                                    <strong>18 units</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Revenue:</span>
+                                    <strong class="text-pv-light">$449.82</strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="top-product-item">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="product-thumb me-3">
+                                    <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=60&q=80" 
+                                         alt="Landscape Photo" class="rounded">
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">Mountain Landscape</h6>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Landscape Category</small>
+                                        <span class="badge bg-pv-light">$19.99</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-stats">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Sales:</span>
+                                    <strong>15 units</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Revenue:</span>
+                                    <strong class="text-pv-light">$299.85</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="row mb-4 g-4">
+        <!-- Client Acquisition -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-pv-very-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-plus me-2 text-pv-light"></i>
+                        Client Acquisition
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="metric-small">
+                                <div class="metric-number text-pv-light">24</div>
+                                <div class="metric-label">New Clients</div>
+                                <div class="metric-change text-success">
+                                    <i class="fas fa-arrow-up me-1"></i>
+                                    15.2%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="metric-small">
+                                <div class="metric-number text-info">$156</div>
+                                <div class="metric-label">Avg. First Order</div>
+                                <div class="metric-change text-danger">
+                                    <i class="fas fa-arrow-down me-1"></i>
+                                    3.4%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="metric-small">
+                                <div class="metric-number text-success">42%</div>
+                                <div class="metric-label">Repeat Rate</div>
+                                <div class="metric-change text-success">
+                                    <i class="fas fa-arrow-up me-1"></i>
+                                    8.7%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container mt-3" style="height: 120px;">
+                        <canvas id="acquisitionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Fulfillment -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-pv-very-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shipping-fast me-2 text-pv-light"></i>
+                        Order Fulfillment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="fulfillment-stats">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Average Processing Time:</span>
+                            <strong class="text-pv-light">1.2 days</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>On-Time Delivery Rate:</span>
+                            <strong class="text-success">95.4%</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Customer Satisfaction:</span>
+                            <strong class="text-warning">4.7/5.0</strong>
+                        </div>
+                        <div class="progress mb-3" style="height: 10px;">
+                            <div class="progress-bar bg-success" style="width: 95%"></div>
+                            <div class="progress-bar bg-warning" style="width: 3%"></div>
+                            <div class="progress-bar bg-danger" style="width: 2%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>On-Time</span>
+                            <span>Delayed</span>
+                            <span>Cancelled</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+        <div class="card-header bg-pv-deep text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-bolt me-2"></i>
+                Quick Actions
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-primary w-100 h-100 p-3" onclick="openUploadModal()">
+                        <i class="fas fa-upload fa-2x mb-2"></i>
+                        <div>Upload New Photos</div>
+                    </button>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="generateReport()">
+                        <i class="fas fa-file-export fa-2x mb-2"></i>
+                        <div>Generate Report</div>
+                    </button>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="manageClients()">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <div>Manage Clients</div>
+                    </button>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="viewAnalytics()">
+                        <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                        <div>Advanced Analytics</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Dashboard specific styles */
+    .dashboard-header {
+        border-bottom: 2px solid var(--pv-light-green);
+    }
+
+    .metric-card {
+        border-left: 4px solid var(--pv-light-green);
+        transition: transform 0.3s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px var(--shadow-color);
+    }
+
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .metric-change {
+        font-size: 0.85rem;
+        margin-top: 5px;
+    }
+
+    .metric-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+
+    .chart-container {
+        position: relative;
+    }
+
+    .client-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--pv-very-light-green);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--pv-light-green);
+    }
+
+    .product-thumb {
+        width: 60px;
+        height: 50px;
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .product-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .top-product-item {
+        padding: 15px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .top-product-item:last-child {
+        border-bottom: none;
+    }
+
+    .metric-small .metric-number {
+        font-size: 1.8rem;
+    }
+
+    .fulfillment-stats .progress {
+        border-radius: 5px;
+    }
+
+    .progress-bar {
+        border-radius: 5px;
+    }
+
+    /* Badge colors */
+    .badge.bg-success {
+        background-color: var(--pv-light-green) !important;
+    }
+
+    .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+
+    .badge.bg-info {
+        background-color: #17a2b8 !important;
+    }
+
+    /* Table styles */
+    .table td, .table th {
+        vertical-align: middle;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .dashboard-header {
+            padding: 20px 15px;
+        }
+        
+        .metric-number {
+            font-size: 2rem;
+        }
+        
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
+        
+        .chart-container {
+            height: 200px !important;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .btn-group.btn-group-sm {
+            flex-wrap: wrap;
+        }
+        
+        .btn-group.btn-group-sm .btn {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+    }
+</style>
+
+<script>
+    // Load Chart.js from CDN
+    const chartScript = document.createElement('script');
+    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    chartScript.onload = initializeCharts;
+    document.head.appendChild(chartScript);
+
+    let revenueChart, orderTypeChart, acquisitionChart;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateDashboardData();
+        initializeEventListeners();
+    });
+
+    function initializeEventListeners() {
+        // Search functionality
+        document.addEventListener('keyup', function(e) {
+            if (e.ctrlKey && e.key === 'r') {
+                refreshDashboard();
+            }
+        });
+    }
+
+    function initializeCharts() {
+        // Revenue Chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        revenueChart = new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan 8', 'Jan 9', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14'],
+                datasets: [{
+                    label: 'Revenue ($)',
+                    data: [450, 520, 480, 610, 540, 690, 720],
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `Revenue: $${context.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Order Type Chart
+        const orderTypeCtx = document.getElementById('orderTypeChart').getContext('2d');
+        orderTypeChart = new Chart(orderTypeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Digital', 'Prints', 'Framed'],
+                datasets: [{
+                    data: [68, 25, 7],
+                    backgroundColor: [
+                        'rgba(76, 175, 80, 0.8)',
+                        'rgba(33, 150, 243, 0.8)',
+                        'rgba(255, 193, 7, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // Acquisition Chart
+        const acquisitionCtx = document.getElementById('acquisitionChart').getContext('2d');
+        acquisitionChart = new Chart(acquisitionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'New Clients',
+                    data: [5, 8, 6, 7],
+                    backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 2
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateDashboardData() {
+        // Update pending orders count
+        const pendingOrders = document.querySelectorAll('.badge.bg-warning.text-dark').length;
+        document.getElementById('pending-orders-count').textContent = pendingOrders;
+        document.getElementById('pending-orders-badge').textContent = pendingOrders;
+    }
+
+    function setDateRange(range) {
+        const dropdownBtn = document.querySelector('[data-bs-toggle="dropdown"]');
+        let rangeText = '';
+        
+        switch(range) {
+            case 'today':
+                rangeText = 'Today';
+                break;
+            case 'yesterday':
+                rangeText = 'Yesterday';
+                break;
+            case 'last7':
+                rangeText = 'Last 7 Days';
+                break;
+            case 'last30':
+                rangeText = 'Last 30 Days';
+                break;
+            case 'last90':
+                rangeText = 'Last 90 Days';
+                break;
+            case 'custom':
+                rangeText = 'Custom Range';
+                // In a real app, this would open a date picker
+                showNotification('Select custom date range', 'info');
+                return;
+        }
+        
+        dropdownBtn.innerHTML = `<i class="fas fa-calendar-alt me-2"></i>${rangeText}`;
+        showNotification(`Date range set to: ${rangeText}`, 'success');
+        
+        // Update data based on selected range
+        refreshDashboardData();
+    }
+
+    function setRevenueChart(type) {
+        const buttons = document.querySelectorAll('[onclick^="setRevenueChart"]');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        let labels = [];
+        let data = [];
+        
+        switch(type) {
+            case 'daily':
+                labels = ['Jan 8', 'Jan 9', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14'];
+                data = [450, 520, 480, 610, 540, 690, 720];
+                break;
+            case 'weekly':
+                labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+                data = [1850, 2100, 1980, 2340];
+                break;
+            case 'monthly':
+                labels = ['Oct', 'Nov', 'Dec', 'Jan'];
+                data = [5890, 6450, 7120, 4256];
+                break;
+        }
+        
+        revenueChart.data.labels = labels;
+        revenueChart.data.datasets[0].data = data;
+        revenueChart.update();
+        
+        showNotification(`Revenue chart updated to ${type} view`, 'info');
+    }
+
+    function refreshDashboard() {
+        const refreshBtn = document.querySelector('[onclick="refreshDashboard()"]');
+        const originalText = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+        refreshBtn.disabled = true;
+        
+        // Simulate API refresh
+        setTimeout(() => {
+            refreshDashboardData();
+            refreshBtn.innerHTML = originalText;
+            refreshBtn.disabled = false;
+            showNotification('Dashboard refreshed successfully', 'success');
+        }, 1500);
+    }
+
+    function refreshDashboardData() {
+        // Simulate data update
+        const newRevenue = (4256 + Math.random() * 500).toFixed(2);
+        const newOrders = 124 + Math.floor(Math.random() * 10);
+        const newClients = 58 + Math.floor(Math.random() * 5);
+        
+        document.getElementById('total-revenue').textContent = `$${newRevenue}`;
+        document.getElementById('total-orders').textContent = newOrders;
+        document.getElementById('active-clients').textContent = newClients;
+        
+        // Update change percentages
+        const changes = ['+12.5%', '+8.3%', '+5.2%', '-2.1%'];
+        document.querySelectorAll('.metric-change span').forEach((span, index) => {
+            span.textContent = changes[index];
+        });
+    }
+
+    function processOrder(orderId) {
+        if (confirm(`Process order ${orderId}? This will move it to the next stage.`)) {
+            showNotification(`Processing order ${orderId}...`, 'info');
+            
+            // Simulate processing
+            setTimeout(() => {
+                const row = event.target.closest('tr');
+                const statusBadge = row.querySelector('.badge');
+                statusBadge.classList.remove('bg-warning', 'text-dark');
+                statusBadge.classList.add('bg-info');
+                statusBadge.textContent = 'Processing';
+                
+                const actionBtn = row.querySelector('button');
+                actionBtn.textContent = 'Track';
+                actionBtn.setAttribute('onclick', `trackOrder('${orderId}')`);
+                
+                showNotification(`Order ${orderId} marked as Processing`, 'success');
+                updateDashboardData();
+            }, 1000);
+        }
+    }
+
+    function viewOrder(orderId) {
+        showNotification(`Loading order ${orderId} details...`, 'info');
+        // In a real app, this would open a modal or redirect
+    }
+
+    function trackOrder(orderId) {
+        showNotification(`Tracking order ${orderId}...`, 'info');
+        // In a real app, this would show tracking information
+    }
+
+    function generateReport() {
+        showNotification('Generating sales report...', 'info');
+        
+        // Simulate report generation
+        setTimeout(() => {
+            showNotification('Report generated successfully (sales_report_january.pdf)', 'success');
+        }, 2000);
+    }
+
+    function manageClients() {
+        showNotification('Opening client management...', 'info');
+        // In a real app, this would redirect to client management page
+    }
+
+    function viewAnalytics() {
+        showNotification('Loading advanced analytics...', 'info');
+        // In a real app, this would redirect to analytics page
+    }
+
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} notification position-fixed`;
+        notification.style.top = '100px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}
