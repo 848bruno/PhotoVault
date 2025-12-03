@@ -5,43 +5,267 @@
 {% block content %}
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card p-4 mt-5">
                 <h2 class="text-center mb-4">Create Account</h2>
+                
+                {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
                 <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" class="form-control" required>
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name *</label>
+                            <input type="text" class="form-control" name="first_name" required 
+                                   placeholder="Enter your first name" 
+                                   value="{{ first_name|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" name="last_name" required 
+                                   placeholder="Enter your last name" 
+                                   value="{{ last_name|default:'' }}">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-control" required>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Username *</label>
+                            <input type="text" class="form-control" name="username" required 
+                                   placeholder="Choose a username" 
+                                   value="{{ username|default:'' }}">
+                            <small class="form-text text-muted">
+                                This will be your public display name
+                            </small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" name="email" required 
+                                   placeholder="Enter your email address" 
+                                   value="{{ email|default:'' }}">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-control" required>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone" 
+                                   placeholder="Optional phone number" 
+                                   value="{{ phone|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Account Type *</label>
+                            <select class="form-select" name="user_type" required>
+    <option value="">Select account type</option>
+
+    {% for value, label in profile_choices %}
+        <option value="{{ value }}" 
+            {% if user_type == value %}selected{% endif %}>
+            {{ label }}
+        </option>
+    {% endfor %}
+</select> 
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Confirm Password</label>
-                        <input type="password" class="form-control" required>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" name="password" required 
+                                   placeholder="Create a password" 
+                                   value="{{ password|default:'' }}">
+                            <small class="form-text text-muted">
+                                Must be at least 8 characters with letters and numbers
+                            </small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Confirm Password *</label>
+                            <input type="password" class="form-control" name="confirm_password" required 
+                                   placeholder="Confirm your password" 
+                                   value="{{ confirm_password|default:'' }}">
+                        </div>
                     </div>
+                    
                     <div class="mb-3">
-                        <label class="form-label">Account Type</label>
-                        <select class="form-select" required>
-                            <option value="">Select account type</option>
-                            <option value="client">Client (Buy Photos)</option>
-                            <option value="photographer">Photographer (Sell Photos)</option>
-                        </select>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="terms" id="terms" required 
+                                   {% if terms %}checked{% endif %}>
+                            <label class="form-check-label" for="terms">
+                                I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms of Service</a> 
+                                and <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a>
+                            </label>
+                        </div>
                     </div>
+                    
                     <div class="d-grid">
-                        <button type="submit" class="btn-pv-primary">Create Account</button>
+                        <button type="submit" class="btn-pv-primary btn-lg">Create Account</button>
                     </div>
-                    <div class="text-center mt-3">
-                        <p>Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+                    
+                    <div class="text-center mt-4">
+                        <p class="mb-2">Already have an account?</p>
+                        <a href="{% url 'login' %}" class="btn-pv-outline">Sign In Here</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Terms of Service Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Terms of Service</h5>
+                <button type="button" class="btn-close close-btn" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Acceptance of Terms</h6>
+                <p>By creating an account on PhotoVault, you agree to these Terms of Service...</p>
+                
+                <h6>2. User Accounts</h6>
+                <p>You are responsible for maintaining the confidentiality of your account...</p>
+                
+                <h6>3. Photo Rights and Usage</h6>
+                <p>All photos remain the property of their respective photographers...</p>
+                
+                <h6>4. Payment and Refunds</h6>
+                <p>All payments are processed securely through Stripe...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-pv-outline" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Privacy Policy Modal -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Privacy Policy</h5>
+                <button type="button" class="btn-close close-btn" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Information We Collect</h6>
+                <p>We collect information you provide when registering...</p>
+                
+                <h6>2. How We Use Your Information</h6>
+                <p>We use your information to provide our services...</p>
+                
+                <h6>3. Data Security</h6>
+                <p>We implement appropriate security measures...</p>
+                
+                <h6>4. Your Rights</h6>
+                <p>You have the right to access, correct, or delete your personal data...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-pv-outline" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        border: none;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+    
+    .form-control:focus {
+        border-color: var(--pv-light-green);
+        box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.15);
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--pv-light-green);
+        border-color: var(--pv-light-green);
+    }
+    
+    .form-text {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+    
+    .btn-lg {
+        padding: 12px 24px;
+        font-size: 1.1rem;
+    }
+</style>
+
+<script>
+    // Password validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const password = document.querySelector('input[name="password"]');
+        const confirm_password = document.querySelector('input[name="confirm_password"]');
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Check password match
+                if (password.value !== confirm_password.value) {
+                    e.preventDefault();
+                    alert('Passwords do not match. Please try again.');
+                    confirm_password.focus();
+                    return false;
+                }
+                
+                // Check password strength
+                if (password.value.length < 8) {
+                    e.preventDefault();
+                    alert('Password must be at least 8 characters long.');
+                    password.focus();
+                    return false;
+                }
+                
+                // Check for letters and numbers
+                if (!/[a-zA-Z]/.test(password.value) || !/\d/.test(password.value)) {
+                    e.preventDefault();
+                    alert('Password must contain both letters and numbers.');
+                    password.focus();
+                    return false;
+                }
+                
+                // Check terms agreement
+                const termsCheckbox = document.getElementById('terms');
+                if (!termsCheckbox.checked) {
+                    e.preventDefault();
+                    alert('You must agree to the Terms of Service and Privacy Policy.');
+                    termsCheckbox.focus();
+                    return false;
+                }
+                
+                return true;
+            });
+        }
+        
+        // Real-time password validation
+        if (password && confirm_password) {
+            confirm_password.addEventListener('input', function() {
+                if (password.value !== confirm_password.value) {
+                    confirm_password.style.borderColor = '#dc3545';
+                } else {
+                    confirm_password.style.borderColor = '#28a745';
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

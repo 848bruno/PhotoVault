@@ -1,8 +1,82 @@
 from django.shortcuts import render
-
+from django.shortcuts import render, redirect,get_object_or_404
+from django.contrib import messages
+from datetime import datetime, date
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login
+from .models import Profile
 # Create your views here.
 def base(request):
     return render(request, 'base.html')
+
+
+
+def register(request):
+    if request.method == 'POST':
+
+        # SAFELY get all fields
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        user_type = request.POST.get('user_type')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        terms = request.POST.get('terms')
+
+        # Validate required fields
+        if not all([first_name, last_name, username, email, user_type, password, confirm_password]):
+            messages.error(request, "Please fill in all required fields.")
+            return render(request, 'register.html', request.POST)
+
+        # Validate terms
+        if not terms:
+            messages.error(request, "You must agree to the Terms and Privacy Policy.")
+            return render(request, 'register.html', request.POST)
+
+        # Password match check
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return render(request, 'register.html', request.POST)
+
+        # Ensure username is unique
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists.")
+            return render(request, 'register.html', request.POST)
+
+        # Ensure email is unique
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email already registered.")
+            return render(request, 'register.html', request.POST)
+
+        # Create user
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email
+        )
+
+        # ---------------------------------------------------------
+        #  CREATE PROFILE associated with the user
+        # ---------------------------------------------------------
+        Profile.objects.create(
+            user=user,
+            phone=phone,
+            user_type=user_type
+        )
+        # ---------------------------------------------------------
+
+        messages.success(request, "Account created successfully! Please log in.")
+        return redirect('login')
+    context = {
+        'profile_choices': Profile.USER_TYPES,
+    }
+
+    return render(request, 'register.html', context)
+
 
 def index(request):
     return render(request, 'index.html')
@@ -19,9 +93,6 @@ def logout(request):
 
 def login(request):
     return render(request, 'login.html')
-
-def register(request):
-    return render(request, 'register.html')
 
 def cart(request):
     return render(request, 'cart.html')
