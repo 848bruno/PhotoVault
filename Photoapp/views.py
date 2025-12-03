@@ -5,6 +5,7 @@ from datetime import datetime, date
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
 from .models import Profile
+from django.contrib.auth import logout
 # Create your views here.
 def base(request):
     return render(request, 'base.html')
@@ -111,6 +112,10 @@ def login_view(request):
 
     return render(request, "login.html")
 
+def logout_view(request):
+    logout(request)
+    messages.success(request, "You have been logged out successfully.")
+    return redirect("login")
 
 
 
@@ -124,8 +129,6 @@ def admin(request):
     return render(request, 'admin.html')
 
 
-def logout(request):
-    return render(request, 'logout.html')
 
 
 
