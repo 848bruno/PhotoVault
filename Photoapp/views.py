@@ -77,6 +77,42 @@ def register(request):
 
     return render(request, 'register.html', context)
 
+def login_view(request):
+    if request.method == "POST":
+        identifier = request.POST.get("identifier")
+        password = request.POST.get("password")
+
+        # Allow login using username OR email
+        try:
+            user = User.objects.get(email=identifier)
+            username = user.username
+        except User.DoesNotExist:
+            username = identifier  # treat as username
+
+        # Authenticate the user
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+
+            # Get user type from profile
+            profile = Profile.objects.get(user=user)
+
+            if profile.user_type == "customer":
+                return redirect("client")  # URL name
+            elif profile.user_type == "photographer":
+                return redirect("admin")  # URL name
+
+            # fallback redirect
+            return redirect("home")
+
+        else:
+            messages.error(request, "Invalid login credentials")
+
+    return render(request, "login.html")
+
+
+
 
 def index(request):
     return render(request, 'index.html')
@@ -91,8 +127,7 @@ def admin(request):
 def logout(request):
     return render(request, 'logout.html')
 
-def login(request):
-    return render(request, 'login.html')
+
 
 def cart(request):
     return render(request, 'cart.html')
