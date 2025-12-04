@@ -30,6 +30,10 @@ urlpatterns = [
     path('order-history/', views.orderHistory, name='orderHistory'),
     path('track-order/', views.trackOrder, name='trackOrder'),
     path('client-manage/', views.clientManage, name='clientManage'),
+    path('upload-photos/', views.upload_photos, name='upload_photos'),
+    path('client-gallery/', views.client_gallery, name='client_gallery'),
+    
+    
     
     path('login/', views.login_view, name='login'),
 ]

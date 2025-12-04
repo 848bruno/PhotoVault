@@ -6,6 +6,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
 from .models import Profile
 from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from .models import Photo
 # Create your views here.
 def base(request):
     return render(request, 'base.html')
@@ -117,6 +120,46 @@ def logout_view(request):
     messages.success(request, "You have been logged out successfully.")
     return redirect("login")
 
+def upload_photos(request):
+
+    if request.method == "POST":
+        client_id = request.POST.get("client")
+        price = request.POST.get("price")
+        category = request.POST.get("category")
+        description = request.POST.get("description")
+        photos = request.FILES.getlist("photos")
+        user_type = request.POST.get('user_type')
+
+        client = User.objects.get(id=client_id)
+
+        for photo in photos:
+            Photo.objects.create(
+                client=client,
+                image=photo,
+                price=price,
+                category=category,
+                description=description,
+            )
+
+        messages.success(request, "Photos uploaded successfully!")
+        return redirect("admin")
+
+   
+
+    return render(request, "admin.html")
+
+
+@login_required
+def client_gallery(request):
+    al = Photo.objects.all()
+
+
+
+   
+    return render(request, "client.html", {"al": al})
+
+
+
 
 
 def index(request):
@@ -126,7 +169,8 @@ def client(request):
     return render(request, 'client.html')
 
 def admin(request):
-    return render(request, 'admin.html')
+    users = User.objects.filter(profile__user_type="customer")
+    return render(request, 'admin.html',{'users':users})
 
 
 
