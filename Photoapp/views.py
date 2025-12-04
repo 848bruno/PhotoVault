@@ -151,22 +151,64 @@ def upload_photos(request):
 
 @login_required
 def client_gallery(request):
-    al = Photo.objects.all()
+ 
+
+    return render(request, "client.html", {
+    })
+    
+@login_required
+def purchase_photo(request, photo_id):
+    photo = Photo.objects.get(id=photo_id, client=request.user)
+    photo.is_purchased = True
+    photo.save()
+
+    messages.success(request, "Photo purchased successfully!")
+    return redirect("client")
 
 
+
+def client(request):
+   
+    photos = Photo.objects.all().order_by("-uploaded_at")
+    purchased_photos = Photo.objects.filter( is_purchased=True)
 
    
-    return render(request, "client.html", {"al": al})
+
+    context = {
+        "photos": photos,
+        "purchased_photos": purchased_photos,
+        "purchased_count": purchased_photos.count(),
+      
+    }
+
+    return render(request, 'client.html', context)
+
+@login_required
+def client_page(request):
+    user = request.user
+
+    client_photos = Photo.objects.filter(client=user, is_purchased=False)
+    purchased_photos = Photo.objects.filter(client=user, is_purchased=True)
+
+    context = {
+        "client_photos": client_photos,
+        "purchased_photos": purchased_photos,
+        "purchased_count": purchased_photos.count(),
+    }
+
+    return render(request, "client.html", context)
 
 
-
+def pic(request):
+     # logged-in user
+    photos = Photo.objects.all().order_by("-uploaded_at")
+    return render(request, 'pic.html', {'photos': photos})
 
 
 def index(request):
     return render(request, 'index.html')
 
-def client(request):
-    return render(request, 'client.html')
+
 
 def admin(request):
     users = User.objects.filter(profile__user_type="customer")

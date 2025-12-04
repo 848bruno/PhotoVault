@@ -32,6 +32,9 @@ urlpatterns = [
     path('client-manage/', views.clientManage, name='clientManage'),
     path('upload-photos/', views.upload_photos, name='upload_photos'),
     path('client-gallery/', views.client_gallery, name='client_gallery'),
+    path('pic/', views.pic, name='pic'),
+    path('client-page/', views.client_page, name='client_page'),
+    path('purchase-photo/<int:photo_id>/', views.purchase_photo, name='purchase_photo'),
     
     
     

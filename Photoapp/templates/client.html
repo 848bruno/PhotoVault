@@ -78,490 +78,188 @@
         </div>
     </div>
 
- 
+<div class="mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-contrast">
+            <i class="fas fa-eye me-2 text-pv-light"></i>
+            Preview Photos
+            <span class="badge bg-secondary ms-2" id="preview-count">
+                {{ photos|length }} photos
+            </span>
+        </h3>
 
-    <!-- Preview Photos Section -->
-    <div class="mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-contrast">
-                <i class="fas fa-eye me-2 text-pv-light"></i>
-                Preview Photos
-                <span class="badge bg-secondary ms-2" id="preview-count">6 photos</span>
-            </h3>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn-pv-outline btn-sm" onclick="selectAllPreview()">
-                    <i class="fas fa-check-square me-1"></i>
-                    Select All
-                </button>
-                <button class="btn-pv-primary btn-sm" onclick="addSelectedToCart()">
-                    <i class="fas fa-cart-plus me-1"></i>
-                    Add to Cart
-                </button>
-            </div>
-        </div>
-        
-        <p class="text-muted mb-4">These photos are available for purchase. Add them to your cart to buy digital copies or order physical prints.</p>
-        
-        <div class="row g-4" id="preview-photos">
-            <!-- Preview Photo 1 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100" data-type="preview">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Wedding Photo" class="card-img-top">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <div class="form-check">
-                                <input class="form-check-input photo-checkbox" type="checkbox" value="1">
-                            </div>
-                        </div>
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-warning text-dark">Preview</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Wedding Ceremony</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 15, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Wedding<br>
-                            <i class="fas fa-camera me-1"></i>Resolution: 8K (7680×4320)
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="price-section">
-                                <span class="text-pv-light fw-bold h5 mb-0">$29.99</span>
-                                <small class="text-muted d-block">Digital Copy</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
-                                    <i class="fas fa-shopping-cart me-1"></i>
-                                    Add
-                                </button>
-                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
-                                    <i class="fas fa-bolt me-1"></i>
-                                    Buy Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preview Photo 2 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100" data-type="preview">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Portrait Photo" class="card-img-top">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <div class="form-check">
-                                <input class="form-check-input photo-checkbox" type="checkbox" value="2">
-                            </div>
-                        </div>
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-warning text-dark">Preview</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Family Portrait</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 14, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Portrait<br>
-                            <i class="fas fa-camera me-1"></i>Resolution: 4K (3840×2160)
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="price-section">
-                                <span class="text-pv-light fw-bold h5 mb-0">$24.99</span>
-                                <small class="text-muted d-block">Digital Copy</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
-                                    <i class="fas fa-shopping-cart me-1"></i>
-                                    Add
-                                </button>
-                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
-                                    <i class="fas fa-bolt me-1"></i>
-                                    Buy Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preview Photo 3 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100" data-type="preview">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Mountain Photo" class="card-img-top">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <div class="form-check">
-                                <input class="form-check-input photo-checkbox" type="checkbox" value="3">
-                            </div>
-                        </div>
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-warning text-dark">Preview</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Mountain Landscape</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 13, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Landscape<br>
-                            <i class="fas fa-camera me-1"></i>Resolution: 6K (6144×3456)
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="price-section">
-                                <span class="text-pv-light fw-bold h5 mb-0">$19.99</span>
-                                <small class="text-muted d-block">Digital Copy</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
-                                    <i class="fas fa-shopping-cart me-1"></i>
-                                    Add
-                                </button>
-                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
-                                    <i class="fas fa-bolt me-1"></i>
-                                    Buy Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preview Photo 4 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100" data-type="preview">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Event Photo" class="card-img-top">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <div class="form-check">
-                                <input class="form-check-input photo-checkbox" type="checkbox" value="4">
-                            </div>
-                        </div>
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-warning text-dark">Preview</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Corporate Event</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 12, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Event<br>
-                            <i class="fas fa-camera me-1"></i>Resolution: 4K (3840×2160)
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="price-section">
-                                <span class="text-pv-light fw-bold h5 mb-0">$22.99</span>
-                                <small class="text-muted d-block">Digital Copy</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
-                                    <i class="fas fa-shopping-cart me-1"></i>
-                                    Add
-                                </button>
-                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
-                                    <i class="fas fa-bolt me-1"></i>
-                                    Buy Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preview Photo 5 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100" data-type="preview">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Product Photo" class="card-img-top">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <div class="form-check">
-                                <input class="form-check-input photo-checkbox" type="checkbox" value="5">
-                            </div>
-                        </div>
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-warning text-dark">Preview</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Product Showcase</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 11, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Product<br>
-                            <i class="fas fa-camera me-1"></i>Resolution: 8K (7680×4320)
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="price-section">
-                                <span class="text-pv-light fw-bold h5 mb-0">$27.99</span>
-                                <small class="text-muted d-block">Digital Copy</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
-                                    <i class="fas fa-shopping-cart me-1"></i>
-                                    Add
-                                </button>
-                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
-                                    <i class="fas fa-bolt me-1"></i>
-                                    Buy Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preview Photo 6 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100" data-type="preview">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1554048612-b6a482bc67e5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Nature Photo" class="card-img-top">
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <div class="form-check">
-                                <input class="form-check-input photo-checkbox" type="checkbox" value="6">
-                            </div>
-                        </div>
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-warning text-dark">Preview</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Nature Scene</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Uploaded: Jan 10, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Nature<br>
-                            <i class="fas fa-camera me-1"></i>Resolution: 5K (5120×2880)
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="price-section">
-                                <span class="text-pv-light fw-bold h5 mb-0">$17.99</span>
-                                <small class="text-muted d-block">Digital Copy</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, 'digital')">
-                                    <i class="fas fa-shopping-cart me-1"></i>
-                                    Add
-                                </button>
-                                <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, 'digital')">
-                                    <i class="fas fa-bolt me-1"></i>
-                                    Buy Now
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn-pv-outline btn-sm" onclick="selectAllPreview()">
+                <i class="fas fa-check-square me-1"></i> Select All
+            </button>
+            <button class="btn-pv-primary btn-sm" onclick="addSelectedToCart()">
+                <i class="fas fa-cart-plus me-1"></i> Add to Cart
+            </button>
         </div>
     </div>
+
+    <p class="text-muted mb-4">
+        These photos are available for purchase. Add them to your cart to buy digital copies or order physical prints.
+    </p>
+
+    <div class="row g-4" id="preview-photos">
+
+        {% for photo in photos %}
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="photo-card card h-100" data-type="preview">
+                <div class="position-relative">
+                    <img src="{{ photo.image.url }}" 
+                         alt="Photo" 
+                         class="card-img-top">
+
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <div class="form-check">
+                            <input class="form-check-input photo-checkbox"
+                                   type="checkbox"
+                                   value="{{ photo.id }}">
+                        </div>
+                    </div>
+
+                    <div class="position-absolute top-0 start-0 m-2">
+                        <span class="badge bg-warning text-dark">Preview</span>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <h5 class="card-title">{{ photo.category }}</h5>
+
+                    <p class="card-text small text-muted">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        Uploaded: {{ photo.uploaded_at|date:"M d, Y" }}<br>
+
+                        <i class="fas fa-tag me-1"></i>
+                        Category: {{ photo.category }}<br>
+
+                        <i class="fas fa-camera me-1"></i>
+                        Resolution: Unknown
+                    </p>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="price-section">
+                            <span class="text-pv-light fw-bold h5 mb-0">
+                                KSH{{ photo.price }}
+                            </span>
+                            <small class="text-muted d-block">Digital Copy</small>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-pv-outline btn-sm" onclick="addToCart(this, '{{ photo.id }}')">
+                                <i class="fas fa-shopping-cart me-1"></i> Add
+                            </button>
+
+                            <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, '{{ photo.id }}')">
+                                <i class="fas fa-bolt me-1"></i> Buy Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+ 
 
     <!-- Purchased Photos Section -->
     <div class="mb-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-contrast">
-                <i class="fas fa-check-circle me-2 text-success"></i>
-                Purchased Photos
-                <span class="badge bg-success ms-2" id="purchased-count">4 photos</span>
-            </h3>
+        
             <div class="d-flex align-items-center gap-2">
-                <button class="btn-pv-primary btn-sm" onclick="openOrderModal()">
-                    <i class="fas fa-print me-1"></i>
-                    Order Prints
-                </button>
+                
             </div>
         </div>
         
-        <p class="text-muted mb-4">These photos have been purchased and are available for download. You can also order physical prints.</p>
+        <p class="text-muted mb-4"></p>
         
         <div class="row g-4" id="purchased-photos">
-            <!-- Purchased Photo 1 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100 purchased" data-type="purchased">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Sunset Photo" class="card-img-top">
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-success">
-                                <i class="fas fa-check me-1"></i>
-                                Purchased
-                            </span>
-                        </div>
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-info">Digital</span>
-                        </div>
+           
+     <!-- Purchased Photos Section -->
+<div class="mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-contrast">
+            <i class="fas fa-check-circle me-2 text-success"></i>
+            Purchased Photos
+            <span class="badge bg-success ms-2">{{ purchased_count }} photos</span>
+        </h3>
+
+        <button class="btn-pv-primary btn-sm" onclick="openOrderModal()">
+            <i class="fas fa-print me-1"></i>
+            Order Prints
+        </button>
+    </div>
+
+    <p class="text-muted mb-4">Photos you have purchased. You can download or print them.</p>
+
+    <div class="row g-4">
+        {% for photo in purchased_photos %}
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="photo-card card h-100 purchased">
+                <div class="position-relative">
+                    <img src="{{ photo.image.url }}"
+                         class="card-img-top"
+                         alt="{{ photo.category }}">
+
+                    <div class="position-absolute top-0 start-0 m-2">
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>
+                            Purchased
+                        </span>
                     </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Sunset Over Ocean</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Jan 5, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Landscape<br>
-                            <i class="fas fa-download me-1"></i>Downloads: 2
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="download-info">
-                                <small class="text-success d-block">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    License: Personal Use
-                                </small>
-                                <small class="text-muted">Expires: Never</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
-                                    <i class="fas fa-download me-1"></i>
-                                    Download
-                                </button>
-                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
-                                    <i class="fas fa-print me-1"></i>
-                                    Print
-                                </button>
-                            </div>
-                        </div>
+
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <span class="badge bg-info">Digital</span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Purchased Photo 2 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100 purchased" data-type="purchased">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Portrait Photo" class="card-img-top">
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-success">
-                                <i class="fas fa-check me-1"></i>
-                                Purchased
-                            </span>
-                        </div>
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-info">Digital</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Professional Headshot</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Jan 3, 2024<br>
-                            <i class="fas fa-tag me-1"></i>Category: Portrait<br>
-                            <i class="fas fa-download me-1"></i>Downloads: 1
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="download-info">
-                                <small class="text-success d-block">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    License: Commercial Use
-                                </small>
-                                <small class="text-muted">Expires: Jan 3, 2025</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
-                                    <i class="fas fa-download me-1"></i>
-                                    Download
-                                </button>
-                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
-                                    <i class="fas fa-print me-1"></i>
-                                    Print
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ photo.category }}</h5>
+                    <p class="card-text small text-muted">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        Purchased: {{ photo.uploaded_at|date:"M d, Y" }}
+                        <br>
+                        <i class="fas fa-tag me-1"></i>
+                        Category: {{ photo.category }}
+                    </p>
 
-            <!-- Purchased Photo 3 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100 purchased" data-type="purchased">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="City Photo" class="card-img-top">
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-success">
-                                <i class="fas fa-check me-1"></i>
-                                Purchased
-                            </span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="download-info">
+                            <small class="text-success d-block">
+                                <i class="fas fa-check-circle me-1"></i>
+                                License: Personal Use
+                            </small>
+                            <small class="text-muted">Expires: Never</small>
                         </div>
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-info">Digital</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">City Skyline</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Dec 28, 2023<br>
-                            <i class="fas fa-tag me-1"></i>Category: Urban<br>
-                            <i class="fas fa-download me-1"></i>Downloads: 3
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="download-info">
-                                <small class="text-success d-block">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    License: Personal Use
-                                </small>
-                                <small class="text-muted">Expires: Never</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
-                                    <i class="fas fa-download me-1"></i>
-                                    Download
-                                </button>
-                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
-                                    <i class="fas fa-print me-1"></i>
-                                    Print
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Purchased Photo 4 -->
-            <div class="col-xl-3 col-lg-4 col-md-6">
-                <div class="photo-card card h-100 purchased" data-type="purchased">
-                    <div class="position-relative">
-                        <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
-                             alt="Wildlife Photo" class="card-img-top">
-                        <div class="position-absolute top-0 start-0 m-2">
-                            <span class="badge bg-success">
-                                <i class="fas fa-check me-1"></i>
-                                Purchased
-                            </span>
-                        </div>
-                        <div class="position-absolute top-0 end-0 m-2">
-                            <span class="badge bg-info">Digital</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">Wildlife in Action</h5>
-                        <p class="card-text small text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>Purchased: Dec 25, 2023<br>
-                            <i class="fas fa-tag me-1"></i>Category: Wildlife<br>
-                            <i class="fas fa-download me-1"></i>Downloads: 2
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="download-info">
-                                <small class="text-success d-block">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    License: Personal Use
-                                </small>
-                                <small class="text-muted">Expires: Never</small>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn btn-success btn-sm" onclick="downloadPhoto(this)">
-                                    <i class="fas fa-download me-1"></i>
-                                    Download
-                                </button>
-                                <button class="btn btn-pv-outline btn-sm" onclick="orderPrint(this)">
-                                    <i class="fas fa-print me-1"></i>
-                                    Print
-                                </button>
-                            </div>
+                        <div class="btn-group">
+                            <a class="btn btn-success btn-sm"
+                               href="{{ photo.image.url }}" download>
+                                <i class="fas fa-download me-1"></i>
+                                Download
+                            </a>
+
+                            <button class="btn btn-pv-outline btn-sm">
+                                <i class="fas fa-print me-1"></i>
+                                Print
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        {% empty %}
+        <p class="text-muted">No purchased photos yet.</p>
+        {% endfor %}
     </div>
+</div>
 
+          
     <!-- Cart Preview (Floating) -->
     <div class="cart-preview position-fixed bottom-0 end-0 m-4 d-none" id="cartPreview">
         <div class="card shadow-lg" style="width: 300px;">
@@ -581,7 +279,7 @@
             <div class="card-footer bg-pv-very-light">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span>Subtotal:</span>
-                    <span class="fw-bold" id="cartPreviewSubtotal">$0.00</span>
+                    <span class="fw-bold" id="cartPreviewSubtotal">KSH.0.00</span>
                 </div>
                 <a href="{% url 'cart' %}" class="btn-pv-primary btn-sm w-100">
                     <i class="fas fa-shopping-bag me-1"></i>
@@ -771,7 +469,7 @@
     function addToCart(button, type) {
         const card = button.closest('.photo-card');
         const title = card.querySelector('.card-title').textContent;
-        const price = card.querySelector('.text-pv-light').textContent.replace('$', '');
+        const price = card.querySelector('.text-pv-light').textContent.replace('KSH', '');
         const imgSrc = card.querySelector('img').src;
         
         const cartItem = {
@@ -877,7 +575,7 @@
         
         if (cartItems.length === 0) {
             container.innerHTML = '<p class="text-muted text-center mb-0">No items in cart</p>';
-            subtotalElement.textContent = '$0.00';
+            subtotalElement.textContent = 'KSH0.00';
             sidebarCount.textContent = '0';
             return;
         }
@@ -917,7 +615,7 @@
         }
         
         container.innerHTML = html;
-        subtotalElement.textContent = '$' + subtotal.toFixed(2);
+        subtotalElement.textContent = 'KSH' + subtotal.toFixed(2);
     }
 
     // Save cart to localStorage
