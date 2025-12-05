@@ -142,7 +142,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="price-section">
                             <span class="text-pv-light fw-bold h5 mb-0">
-                                KSH{{ photo.price }}
+                                KSH {{ photo.price }}
                             </span>
                             <small class="text-muted d-block">Digital Copy</small>
                         </div>
@@ -401,264 +401,217 @@
 </style>
 
 <script>
-    // Cart management
-    let cartItems = [];
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        updateCounts();
-        loadCartFromStorage();
-        
-        // Add event listeners to checkboxes
-        document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updateCounts);
-        });
-    });
-
-    // Update photo counts
-    function updateCounts() {
-        const previewCount = document.querySelectorAll('#preview-photos .photo-card').length;
-        const purchasedCount = document.querySelectorAll('#purchased-photos .photo-card').length;
-        const selectedCount = document.querySelectorAll('.photo-checkbox:checked').length;
-        
-        document.getElementById('preview-count').textContent = previewCount + ' photos';
-        document.getElementById('purchased-count').textContent = purchasedCount + ' photos';
-        
-        if (selectedCount > 0) {
-            document.querySelector('[onclick="addSelectedToCart()"]').innerHTML = 
-                `<i class="fas fa-cart-plus me-1"></i> Add ${selectedCount} to Cart`;
-        } else {
-            document.querySelector('[onclick="addSelectedToCart()"]').innerHTML = 
-                `<i class="fas fa-cart-plus me-1"></i> Add to Cart`;
-        }
-    }
-
-    // Filter photos
-    function filterPhotos(filter) {
-        const filterButtons = document.querySelectorAll('.btn-group .btn');
-        filterButtons.forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-        
-        if (filter === 'all') {
-            document.querySelectorAll('.photo-card').forEach(card => {
-                card.style.display = 'block';
-            });
-        } else if (filter === 'preview') {
-            document.querySelectorAll('.photo-card').forEach(card => {
-                card.style.display = card.dataset.type === 'preview' ? 'block' : 'none';
-            });
-        } else if (filter === 'purchased') {
-            document.querySelectorAll('.photo-card').forEach(card => {
-                card.style.display = card.dataset.type === 'purchased' ? 'block' : 'none';
-            });
-        }
-    }
-
-    // Select all preview photos
-    function selectAllPreview() {
-        const checkboxes = document.querySelectorAll('#preview-photos .photo-checkbox');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = !allChecked;
-        });
-        
-        updateCounts();
-    }
-
-    // Add individual photo to cart
-    function addToCart(button, type) {
-        const card = button.closest('.photo-card');
-        const title = card.querySelector('.card-title').textContent;
-        const price = card.querySelector('.text-pv-light').textContent.replace('KSH', '');
-        const imgSrc = card.querySelector('img').src;
-        
-        const cartItem = {
-            id: Date.now(),
-            title: title,
-            price: parseFloat(price),
-            type: type,
-            image: imgSrc,
-            quantity: 1
-        };
-        
-        // Check if item already in cart
-        const existingItem = cartItems.find(item => item.title === title && item.type === type);
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            cartItems.push(cartItem);
-        }
-        
-        saveCartToStorage();
-        updateCartPreview();
-        showNotification(`${title} added to cart`, 'success');
-        
-        // Show cart preview
-        showCartPreview();
-    }
-
-    // Quick buy (add to cart and proceed to checkout)
-    function quickBuy(button, type) {
-        addToCart(button, type);
-        setTimeout(() => {
-            window.location.href = "{% url 'cart' %}";
-        }, 500);
-    }
-
-    // Add selected photos to cart
-    function addSelectedToCart() {
-        const selectedCheckboxes = document.querySelectorAll('.photo-checkbox:checked');
-        
-        if (selectedCheckboxes.length === 0) {
-            showNotification('Please select photos to add to cart', 'warning');
-            return;
-        }
-        
-        selectedCheckboxes.forEach(checkbox => {
-            const card = checkbox.closest('.photo-card');
-            const button = card.querySelector('[onclick*="addToCart"]');
-            if (button) {
-                addToCart(button, 'digital');
-            }
-        });
-        
-        // Uncheck all checkboxes after adding
-        selectedCheckboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        
-        updateCounts();
-    }
-
-    // Download purchased photo
-    function downloadPhoto(button) {
-        const card = button.closest('.photo-card');
-        const title = card.querySelector('.card-title').textContent;
-        
-        // Show download modal or simulate download
-        showNotification(`Downloading "${title}"...`, 'info');
-        
-        // Simulate download delay
-        setTimeout(() => {
-            showNotification(`"${title}" downloaded successfully!`, 'success');
-        }, 1500);
-    }
-
-    // Order print of purchased photo
-    function orderPrint(button) {
-        openOrderModal();
-    }
-
-    // Show cart preview
     function showCartPreview() {
-        const cartPreview = document.getElementById('cartPreview');
-        cartPreview.classList.remove('d-none');
-        
-        // Auto hide after 5 seconds
-        setTimeout(() => {
-            if (!cartPreview.matches(':hover')) {
-                hideCartPreview();
+    const preview = document.getElementById('cartPreview');
+
+    // Load preview HTML from backend
+    fetch('/cart-preview/')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('cartPreviewItems');
+            const subtotalEl = document.getElementById('cartPreviewSubtotal');
+
+            if (data.items.length === 0) {
+                container.innerHTML = `<p class="text-muted text-center mb-0">No items in cart</p>`;
+                subtotalEl.textContent = "KSH.0.00";
+            } else {
+                let html = '';
+                data.items.forEach(item => {
+                    html += `
+                        <div class="cart-item-mini">
+                            <div class="cart-item-mini-img">
+                                <img src="${item.image}" alt="">
+                            </div>
+                            <div class="cart-item-mini-details">
+                                <h6>${item.title}</h6>
+                                <small>KSH ${item.price}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+                subtotalEl.textContent = "KSH " + data.subtotal;
             }
-        }, 5000);
-    }
 
-    // Hide cart preview
-    function hideCartPreview() {
-        document.getElementById('cartPreview').classList.add('d-none');
-    }
-
-    // Update cart preview
-    function updateCartPreview() {
-        const container = document.getElementById('cartPreviewItems');
-        const subtotalElement = document.getElementById('cartPreviewSubtotal');
-        const sidebarCount = document.getElementById('sidebar-cart-count');
-        
-        if (cartItems.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center mb-0">No items in cart</p>';
-            subtotalElement.textContent = 'KSH0.00';
-            sidebarCount.textContent = '0';
-            return;
-        }
-        
-        // Calculate total items and subtotal
-        let totalItems = 0;
-        let subtotal = 0;
-        
-        cartItems.forEach(item => {
-            totalItems += item.quantity;
-            subtotal += item.price * item.quantity;
+            preview.classList.remove('d-none');
         });
+}
+
+function hideCartPreview() {
+    document.getElementById('cartPreview').classList.add('d-none');
+}
+   // Cart management
+document.addEventListener('DOMContentLoaded', function() {
+    updateCounts();
+    
+    // Add event listeners to checkboxes
+    document.querySelectorAll('.photo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateCounts);
+    });
+});
+
+// Update photo counts
+function updateCounts() {
+    const previewCount = document.querySelectorAll('#preview-photos .photo-card').length;
+    const purchasedCount = document.querySelectorAll('#purchased-photos .photo-card').length;
+    const selectedCount = document.querySelectorAll('.photo-checkbox:checked').length;
+    
+    document.getElementById('preview-count').textContent = previewCount + ' photos';
+    
+    if (selectedCount > 0) {
+        document.querySelector('[onclick="addSelectedToCart()"]').innerHTML = 
+            `<i class="fas fa-cart-plus me-1"></i> Add ${selectedCount} to Cart`;
+    } else {
+        document.querySelector('[onclick="addSelectedToCart()"]').innerHTML = 
+            `<i class="fas fa-cart-plus me-1"></i> Add to Cart`;
+    }
+}
+
+// Add individual photo to cart
+function addToCart(button, photoId) {
+    const card = button.closest('.photo-card');
+    const title = card.querySelector('.card-title').textContent;
+    
+    fetch('/add-to-cart/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            photo_id: photoId,
+            quantity: 1
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            
+            // Update cart count in sidebar
+            document.getElementById('sidebar-cart-count').textContent = data.cart_count;
+            
+            // Show cart preview
+            showCartPreview();
+        } else {
+            showNotification('Error: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error adding to cart', 'danger');
+    });
+}
+
+// Quick buy (purchase immediately)
+function quickBuy(button, photoId) {
+    if (confirm('Are you sure you want to buy this photo now?')) {
+        window.location.href = `/quick-buy/${photoId}/`;
+    }
+}
+
+// Add selected photos to cart
+function addSelectedToCart() {
+    const selectedCheckboxes = document.querySelectorAll('.photo-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        showNotification('Please select photos to add to cart', 'warning');
+        return;
+    }
+    
+    let addedCount = 0;
+    const promises = [];
+    
+    selectedCheckboxes.forEach(checkbox => {
+        const photoId = checkbox.value;
         
-        // Update sidebar count
-        sidebarCount.textContent = totalItems;
-        
-        // Update preview items (show first 3 items)
-        let html = '';
-        const itemsToShow = cartItems.slice(0, 3);
-        
-        itemsToShow.forEach(item => {
-            html += `
-                <div class="cart-item-mini">
-                    <div class="cart-item-mini-img">
-                        <img src="${item.image}" alt="${item.title}">
-                    </div>
-                    <div class="cart-item-mini-details">
-                        <h6>${item.title}</h6>
-                        <small>${item.type === 'digital' ? 'Digital' : 'Print'} • $${item.price.toFixed(2)} × ${item.quantity}</small>
-                    </div>
-                </div>
-            `;
+        promises.push(
+            fetch('/add-to-cart/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    photo_id: photoId,
+                    quantity: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addedCount++;
+                }
+                return data;
+            })
+        );
+    });
+    
+    Promise.all(promises)
+        .then(results => {
+            const totalCount = results[results.length - 1].cart_count;
+            document.getElementById('sidebar-cart-count').textContent = totalCount;
+            
+            showNotification(`Added ${addedCount} photos to cart`, 'success');
+            
+            // Uncheck all checkboxes after adding
+            selectedCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            updateCounts();
+            showCartPreview();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error adding some photos to cart', 'danger');
         });
-        
-        if (cartItems.length > 3) {
-            html += `<p class="text-center small text-muted mb-0">+${cartItems.length - 3} more items</p>`;
-        }
-        
-        container.innerHTML = html;
-        subtotalElement.textContent = 'KSH' + subtotal.toFixed(2);
-    }
+}
 
-    // Save cart to localStorage
-    function saveCartToStorage() {
-        localStorage.setItem('photovault_cart', JSON.stringify(cartItems));
-    }
-
-    // Load cart from localStorage
-    function loadCartFromStorage() {
-        const savedCart = localStorage.getItem('photovault_cart');
-        if (savedCart) {
-            cartItems = JSON.parse(savedCart);
-            updateCartPreview();
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
     }
+    return cookieValue;
+}
 
-    // Show notification
-    function showNotification(message, type) {
-        // Remove existing notification
-        const existingNotification = document.querySelector('.gallery-notification');
-        if (existingNotification) {
-            existingNotification.remove();
-        }
-        
-        // Create notification
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} gallery-notification position-fixed`;
-        notification.style.top = '100px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
-        notification.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
-                <span>${message}</span>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto remove after 3 seconds
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+// Show notification
+function showNotification(message, type) {
+    // Remove existing notification
+    const existingNotification = document.querySelector('.gallery-notification');
+    if (existingNotification) {
+        existingNotification.remove();
     }
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} gallery-notification position-fixed`;
+    notification.style.top = '100px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
 </script>
 {% endblock %}

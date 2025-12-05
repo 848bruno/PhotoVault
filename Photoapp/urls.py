@@ -35,6 +35,12 @@ urlpatterns = [
     path('pic/', views.pic, name='pic'),
     path('client-page/', views.client_page, name='client_page'),
     path('purchase-photo/<int:photo_id>/', views.purchase_photo, name='purchase_photo'),
+    path('add-to-cart/', views.add_to_cart, name='add_to_cart'),
+    path('remove-from-cart/<int:cart_item_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('update-cart-quantity/', views.update_cart_quantity, name='update_cart_quantity'),
+    path('checkout/', views.checkout, name='checkout'),
+    path('clear-cart/', views.clear_cart, name='clear_cart'),
+  
     
     
     

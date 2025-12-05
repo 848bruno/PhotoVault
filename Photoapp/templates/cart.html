@@ -20,7 +20,7 @@
             <a href="{% url 'cart' %}" class="sidebar-link active">
                 <i class="fas fa-shopping-cart"></i>
                 <span>Cart</span>
-                <span class="badge bg-pv-light rounded-pill ms-auto" id="cart-count">3</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="cart-count">{{ cart_items.count }}</span>
             </a>
         </div>
         
@@ -60,17 +60,19 @@
                 Shopping Cart
             </h1>
             <div class="d-flex align-items-center gap-3">
-                <span class="text-muted" id="item-count">3 items</span>
+                <span class="text-muted" id="item-count">{{ cart_items.count }} item{{ cart_items.count|pluralize }}</span>
+                {% if cart_items %}
                 <button class="btn-pv-outline btn-sm" onclick="clearCart()">
                     <i class="fas fa-trash-alt me-1"></i>
                     Clear Cart
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>
 
     <div class="row g-4">
-        <!-- Cart Items Section -->
+        <!-- Left Column: Cart Items & Shipping Info -->
         <div class="col-lg-8">
             <!-- Cart Items List -->
             <div class="card mb-4">
@@ -79,7 +81,11 @@
                         <table class="table table-hover mb-0">
                             <thead class="bg-pv-very-light">
                                 <tr>
-                                    <th class="border-0 ps-4" style="width: 60px;"></th>
+                                    <th class="border-0 ps-4" style="width: 60px;">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="select-all" checked onclick="selectAllItems(this)">
+                                        </div>
+                                    </th>
                                     <th class="border-0">Photo</th>
                                     <th class="border-0 text-center">Type</th>
                                     <th class="border-0 text-center">Quantity</th>
@@ -88,23 +94,25 @@
                                 </tr>
                             </thead>
                             <tbody id="cart-items">
-                                <!-- Digital Photo 1 -->
-                                <tr class="cart-item">
+                                {% for item in cart_items %}
+                                <tr class="cart-item" data-item-id="{{ item.id }}">
                                     <td class="ps-4">
                                         <div class="form-check">
-                                            <input class="form-check-input item-checkbox" type="checkbox" checked>
+                                            <input class="form-check-input item-checkbox" type="checkbox" checked data-item-id="{{ item.id }}">
                                         </div>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="cart-item-image" style="width: 80px; height: 60px;">
-                                                <img src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" 
-                                                     alt="Wedding Photo" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
+                                                <img src="{{ item.photo.image.url }}" 
+                                                     alt="{{ item.photo.category }}" 
+                                                     class="img-fluid rounded" 
+                                                     style="width: 100%; height: 100%; object-fit: cover;">
                                             </div>
                                             <div>
-                                                <h6 class="mb-1">Wedding Portrait #1</h6>
-                                                <p class="text-muted mb-0 small">Category: Wedding</p>
-                                                <p class="text-muted mb-0 small">Resolution: 8K (7680×4320)</p>
+                                                <h6 class="mb-1">{{ item.photo.category }}</h6>
+                                                <p class="text-muted mb-0 small">Category: {{ item.photo.category }}</p>
+                                                <p class="text-muted mb-0 small">Uploaded: {{ item.photo.uploaded_at|date:"M d, Y" }}</p>
                                             </div>
                                         </div>
                                     </td>
@@ -113,122 +121,47 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="quantity-control d-inline-flex align-items-center">
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, -1)">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="decreaseQuantity({{ item.id }})">
                                                 <i class="fas fa-minus"></i>
                                             </button>
-                                            <input type="number" class="form-control form-control-sm text-center mx-2" 
-                                                   value="1" min="1" max="10" style="width: 60px;" 
-                                                   onchange="updateItemTotal(this)">
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, 1)">
+                                            <input type="number" 
+                                                   class="form-control form-control-sm text-center mx-2 quantity-input" 
+                                                   value="{{ item.quantity }}" 
+                                                   min="1" 
+                                                   max="10" 
+                                                   style="width: 60px;" 
+                                                   data-item-id="{{ item.id }}"
+                                                   onchange="updateCartQuantity(this)">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="increaseQuantity({{ item.id }})">
                                                 <i class="fas fa-plus"></i>
                                             </button>
                                         </div>
                                     </td>
                                     <td class="text-end">
-                                        <div class="item-price">$29.99</div>
-                                        <div class="item-total text-pv-light fw-bold">$29.99</div>
+                                        <div class="item-price">KSH {{ item.photo.price }}</div>
+                                        <div class="item-total text-pv-light fw-bold" data-item-id="{{ item.id }}">
+                                            KSH {{ item.total_price|floatformat:2 }}
+                                        </div>
                                     </td>
                                     <td class="text-center pe-4">
-                                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="removeCartItem({{ item.id }})">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
-
-                                <!-- Digital Photo 2 -->
-                                <tr class="cart-item">
-                                    <td class="ps-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input item-checkbox" type="checkbox" checked>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="fas fa-shopping-cart fa-2x mb-3"></i>
+                                            <p class="mb-0">Your cart is empty</p>
+                                            <a href="{% url 'client' %}" class="btn-pv-primary btn-sm mt-2">
+                                                Browse Photos
+                                            </a>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="cart-item-image" style="width: 80px; height: 60px;">
-                                                <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" 
-                                                     alt="Landscape Photo" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-1">Mountain Landscape</h6>
-                                                <p class="text-muted mb-0 small">Category: Landscape</p>
-                                                <p class="text-muted mb-0 small">Resolution: 4K (3840×2160)</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info">Digital</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="quantity-control d-inline-flex align-items-center">
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, -1)">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
-                                            <input type="number" class="form-control form-control-sm text-center mx-2" 
-                                                   value="1" min="1" max="10" style="width: 60px;"
-                                                   onchange="updateItemTotal(this)">
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, 1)">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="item-price">$19.99</div>
-                                        <div class="item-total text-pv-light fw-bold">$19.99</div>
-                                    </td>
-                                    <td class="text-center pe-4">
-                                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
                                     </td>
                                 </tr>
-
-                                <!-- Physical Print -->
-                                <tr class="cart-item">
-                                    <td class="ps-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input item-checkbox" type="checkbox" checked>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="cart-item-image" style="width: 80px; height: 60px;">
-                                                <img src="https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80" 
-                                                     alt="Family Photo" class="img-fluid rounded" style="width: 100%; height: 100%; object-fit: cover;">
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-1">Family Portrait - Print</h6>
-                                                <p class="text-muted mb-0 small">Size: 8x10 inches</p>
-                                                <p class="text-muted mb-0 small">Paper: Premium Matte</p>
-                                                <p class="text-muted mb-0 small">Framing: None</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-warning text-dark">Physical Print</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="quantity-control d-inline-flex align-items-center">
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, -1)">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
-                                            <input type="number" class="form-control form-control-sm text-center mx-2" 
-                                                   value="2" min="1" max="10" style="width: 60px;"
-                                                   onchange="updateItemTotal(this)">
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(this, 1)">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td class="text-end">
-                                        <div class="item-price">$12.99</div>
-                                        <div class="item-total text-pv-light fw-bold">$25.98</div>
-                                    </td>
-                                    <td class="text-center pe-4">
-                                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -247,25 +180,25 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Shipping Address</label>
-                            <textarea class="form-control" rows="3" id="shipping-address">123 Main Street, San Francisco, CA 94107</textarea>
+                            <textarea class="form-control" rows="3" id="shipping-address"></textarea>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Shipping Method</label>
-                            <select class="form-select" id="shipping-method">
-                                <option value="standard" selected>Standard Shipping (5-7 business days) - $4.99</option>
-                                <option value="express">Express Shipping (2-3 business days) - $9.99</option>
-                                <option value="overnight">Overnight Shipping (1 business day) - $19.99</option>
+                            <select class="form-select" id="shipping-method" onchange="updateCartSummary()">
+                                <option value="standard" selected>Standard Shipping (5-7 business days) - KSH 200</option>
+                                <option value="express">Express Shipping (2-3 business days) - KSH 500</option>
+                                <option value="overnight">Overnight Shipping (1 business day) - KSH 1000</option>
                             </select>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Contact Email</label>
-                            <input type="email" class="form-control" value="john.doe@example.com">
+                            <input type="email" class="form-control" id="contact-email" value="{{ user.email }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" value="(555) 123-4567">
+                            <input type="tel" class="form-control" id="phone-number">
                         </div>
                     </div>
                     <div class="form-check">
@@ -278,19 +211,21 @@
             </div>
 
             <!-- Continue Shopping -->
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between mb-4">
                 <a href="{% url 'client' %}" class="btn-pv-outline">
                     <i class="fas fa-arrow-left me-2"></i>
                     Continue Shopping
                 </a>
+                {% if cart_items %}
                 <button class="btn-pv-outline" onclick="saveForLater()">
                     <i class="far fa-heart me-2"></i>
                     Save for Later
                 </button>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Order Summary -->
+        <!-- Right Column: Order Summary -->
         <div class="col-lg-4">
             <div class="card sticky-top" style="top: 100px;">
                 <div class="card-header bg-pv-deep text-white">
@@ -302,25 +237,25 @@
                 <div class="card-body">
                     <div class="order-summary">
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Subtotal (3 items)</span>
-                            <span id="subtotal">$75.96</span>
+                            <span>Subtotal (<span id="summary-item-count">{{ cart_items.count }}</span> items)</span>
+                            <span id="subtotal">KSH {{ subtotal|floatformat:2 }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Shipping</span>
-                            <span id="shipping-cost">$4.99</span>
+                            <span id="shipping-cost">KSH {{ shipping|floatformat:2 }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Tax</span>
-                            <span id="tax">$6.08</span>
+                            <span>Tax ({{ tax_rate }}%)</span>
+                            <span id="tax">KSH {{ tax|floatformat:2 }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span>Discount</span>
-                            <span class="text-success" id="discount">-$5.00</span>
+                            <span class="text-success" id="discount">-KSH 0.00</span>
                         </div>
                         <hr>
                         <div class="d-flex justify-content-between mb-4">
                             <h5 class="fw-bold">Total</h5>
-                            <h5 class="fw-bold text-pv-light" id="total">$82.03</h5>
+                            <h5 class="fw-bold text-pv-light" id="total">KSH {{ total|floatformat:2 }}</h5>
                         </div>
 
                         <!-- Promo Code -->
@@ -367,10 +302,17 @@
                         </div>
 
                         <!-- Checkout Button -->
+                        {% if cart_items %}
                         <button class="btn-pv-primary btn-lg w-100 mb-3" onclick="proceedToCheckout()">
                             <i class="fas fa-lock me-2"></i>
                             Proceed to Secure Checkout
                         </button>
+                        {% else %}
+                        <button class="btn-pv-primary btn-lg w-100 mb-3" disabled>
+                            <i class="fas fa-lock me-2"></i>
+                            Cart is Empty
+                        </button>
+                        {% endif %}
 
                         <!-- Security Info -->
                         <div class="text-center">
@@ -434,7 +376,6 @@
 
     .item-price {
         color: var(--text-muted);
-        text-decoration: line-through;
         font-size: 0.9rem;
     }
 
@@ -482,159 +423,281 @@
         .quantity-control input {
             width: 50px !important;
         }
+        
+        .sticky-top {
+            position: static;
+        }
     }
 </style>
 
 <script>
-    // Cart functionality
+    // Global variables
+    let currentDiscount = 0;
+    const taxRate = 8; // 8% tax
+    const shippingCosts = {
+        'standard': 200,
+        'express': 500,
+        'overnight': 1000
+    };
+
     document.addEventListener('DOMContentLoaded', function() {
         updateCartSummary();
         
-        // Shipping method change
+        // Add event listeners
         document.getElementById('shipping-method').addEventListener('change', updateCartSummary);
-        
-        // Item checkbox change
         document.querySelectorAll('.item-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', updateCartSummary);
         });
     });
 
-    // Update quantity
-    function updateQuantity(button, change) {
-        const input = button.parentElement.querySelector('input[type="number"]');
-        let value = parseInt(input.value) + change;
-        
-        if (value >= parseInt(input.min) && value <= parseInt(input.max)) {
-            input.value = value;
-            updateItemTotal(input);
-            updateCartSummary();
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Increase quantity
+    function increaseQuantity(itemId) {
+        const input = document.querySelector(`.quantity-input[data-item-id="${itemId}"]`);
+        if (input) {
+            input.value = parseInt(input.value) + 1;
+            updateCartQuantity(input);
         }
     }
 
-    // Update item total
-    function updateItemTotal(input) {
-        const row = input.closest('tr');
-        const priceText = row.querySelector('.item-price').textContent;
-        const price = parseFloat(priceText.replace('$', ''));
+    // Decrease quantity
+    function decreaseQuantity(itemId) {
+        const input = document.querySelector(`.quantity-input[data-item-id="${itemId}"]`);
+        if (input && parseInt(input.value) > 1) {
+            input.value = parseInt(input.value) - 1;
+            updateCartQuantity(input);
+        }
+    }
+
+    // Update quantity via AJAX
+    function updateCartQuantity(input) {
+        const itemId = input.dataset.itemId;
         const quantity = parseInt(input.value);
-        const total = price * quantity;
         
-        row.querySelector('.item-total').textContent = '$' + total.toFixed(2);
+        if (quantity < 1) {
+            removeCartItem(itemId);
+            return;
+        }
+        
+        fetch('/update-cart-quantity/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                cart_item_id: itemId,
+                quantity: quantity
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update item total
+                const itemTotalElement = document.querySelector(`.item-total[data-item-id="${itemId}"]`);
+                if (itemTotalElement) {
+                    itemTotalElement.textContent = 'KSH ' + data.item_total.toFixed(2);
+                }
+                
+                // Update cart summary
+                updateCartSummary();
+                showNotification('Quantity updated', 'success');
+            } else {
+                showNotification('Error updating quantity: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error updating quantity', 'danger');
+        });
+    }
+
+    // Remove item from cart
+    function removeCartItem(itemId) {
+        if (confirm('Remove this item from your cart?')) {
+            fetch('/remove-from-cart/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    cart_item_id: itemId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove row from table
+                    const row = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+                    if (row) {
+                        row.style.opacity = '0.5';
+                        setTimeout(() => {
+                            row.remove();
+                            updateCartSummary();
+                            
+                            // If cart is empty, reload page
+                            if (document.querySelectorAll('.cart-item').length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }
+                    
+                    // Update cart count
+                    document.getElementById('cart-count').textContent = data.cart_count;
+                    showNotification('Item removed from cart', 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error removing item', 'danger');
+            });
+        }
+    }
+
+    // Clear entire cart
+    function clearCart() {
+        if (confirm('Are you sure you want to clear your entire cart?')) {
+            window.location.href = '/clear-cart/';
+        }
+    }
+
+    // Select all items
+    function selectAllItems(selectAllCheckbox) {
+        const isChecked = selectAllCheckbox.checked;
+        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
         updateCartSummary();
     }
 
-    // Update cart summary
+    // Update cart summary dynamically
     function updateCartSummary() {
         let subtotal = 0;
         let itemCount = 0;
+        let checkedItemCount = 0;
         
         // Calculate subtotal from checked items
         document.querySelectorAll('.cart-item').forEach(row => {
             const checkbox = row.querySelector('.item-checkbox');
-            if (checkbox.checked) {
-                const itemTotalText = row.querySelector('.item-total').textContent;
-                const itemTotal = parseFloat(itemTotalText.replace('$', ''));
+            const quantityInput = row.querySelector('.quantity-input');
+            const itemTotalText = row.querySelector('.item-total').textContent;
+            
+            // Count all items
+            if (quantityInput) {
+                itemCount += parseInt(quantityInput.value);
+            }
+            
+            // Calculate subtotal for checked items
+            if (checkbox && checkbox.checked && quantityInput) {
+                const itemTotal = parseFloat(itemTotalText.replace('KSH', '').trim());
                 subtotal += itemTotal;
-                
-                const quantity = parseInt(row.querySelector('input[type="number"]').value);
-                itemCount += quantity;
+                checkedItemCount += parseInt(quantityInput.value);
             }
         });
         
-        // Update item count
+        // Update item counts
         document.getElementById('item-count').textContent = itemCount + ' item' + (itemCount !== 1 ? 's' : '');
-        document.getElementById('cart-count').textContent = itemCount;
+        document.getElementById('summary-item-count').textContent = checkedItemCount;
         
-        // Calculate shipping
+        // Get shipping method
         const shippingMethod = document.getElementById('shipping-method').value;
-        let shippingCost = 4.99; // Standard
+        let shippingCost = shippingCosts[shippingMethod] || 0;
         
-        if (shippingMethod === 'express') {
-            shippingCost = 9.99;
-        } else if (shippingMethod === 'overnight') {
-            shippingCost = 19.99;
-        }
-        
-        // Apply free shipping for orders over $50
-        if (subtotal >= 50) {
+        // Apply free shipping for orders over KSH 5000
+        if (subtotal >= 5000) {
             shippingCost = 0;
         }
         
-        // Calculate tax (8%)
-        const tax = subtotal * 0.08;
-        
-        // Apply discount
-        let discount = 0;
-        const promoCode = document.getElementById('promo-code').value.toUpperCase();
-        if (promoCode === 'PHOTO10') {
-            discount = subtotal * 0.10; // 10% discount
-        } else if (promoCode === 'WELCOME5') {
-            discount = 5.00; // $5 discount
-        }
+        // Calculate tax
+        const tax = subtotal * (taxRate / 100);
         
         // Calculate total
-        const total = subtotal + shippingCost + tax - discount;
+        const total = subtotal + shippingCost + tax - currentDiscount;
         
         // Update summary display
-        document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
-        document.getElementById('shipping-cost').textContent = shippingCost === 0 ? 'FREE' : '$' + shippingCost.toFixed(2);
-        document.getElementById('tax').textContent = '$' + tax.toFixed(2);
-        document.getElementById('discount').textContent = discount > 0 ? '-$' + discount.toFixed(2) : '$0.00';
-        document.getElementById('total').textContent = '$' + total.toFixed(2);
+        document.getElementById('subtotal').textContent = 'KSH ' + subtotal.toFixed(2);
+        document.getElementById('shipping-cost').textContent = shippingCost === 0 ? 'FREE' : 'KSH ' + shippingCost.toFixed(2);
+        document.getElementById('tax').textContent = 'KSH ' + tax.toFixed(2);
+        document.getElementById('discount').textContent = currentDiscount > 0 ? '-KSH ' + currentDiscount.toFixed(2) : '-KSH 0.00';
+        document.getElementById('total').textContent = 'KSH ' + total.toFixed(2);
         
         // Highlight free shipping
+        const shippingElement = document.getElementById('shipping-cost');
         if (shippingCost === 0) {
-            document.getElementById('shipping-cost').classList.add('text-success', 'fw-bold');
+            shippingElement.classList.add('text-success', 'fw-bold');
         } else {
-            document.getElementById('shipping-cost').classList.remove('text-success', 'fw-bold');
-        }
-    }
-
-    // Remove item from cart
-    function removeItem(button) {
-        const row = button.closest('tr');
-        if (confirm('Remove this item from your cart?')) {
-            row.style.opacity = '0.5';
-            setTimeout(() => {
-                row.remove();
-                updateCartSummary();
-                showNotification('Item removed from cart', 'success');
-            }, 300);
-        }
-    }
-
-    // Clear cart
-    function clearCart() {
-        if (confirm('Are you sure you want to clear your entire cart?')) {
-            document.querySelectorAll('.cart-item').forEach(row => {
-                row.remove();
-            });
-            updateCartSummary();
-            showNotification('Cart cleared', 'info');
+            shippingElement.classList.remove('text-success', 'fw-bold');
         }
     }
 
     // Apply promo code
     function applyPromoCode() {
         const promoCode = document.getElementById('promo-code').value.toUpperCase();
-        const validCodes = ['PHOTO10', 'WELCOME5', 'SAVE20'];
+        const promoSuccess = document.getElementById('promo-success');
+        const promoError = document.getElementById('promo-error');
         
-        if (promoCode === '') {
-            document.getElementById('promo-error').textContent = 'Please enter a promo code';
-            document.getElementById('promo-error').classList.remove('d-none');
-            document.getElementById('promo-success').classList.add('d-none');
+        // Hide previous messages
+        promoSuccess.classList.add('d-none');
+        promoError.classList.add('d-none');
+        
+        if (!promoCode) {
+            promoError.textContent = 'Please enter a promo code';
+            promoError.classList.remove('d-none');
             return;
         }
         
-        if (validCodes.includes(promoCode)) {
-            document.getElementById('promo-success').classList.remove('d-none');
-            document.getElementById('promo-error').classList.add('d-none');
+        // Define valid promo codes and their discounts
+        const validPromoCodes = {
+            'PHOTO10': 0.10, // 10% discount
+            'WELCOME5': 5.00, // KSH 5 discount
+            'SAVE20': 0.20 // 20% discount
+        };
+        
+        if (validPromoCodes.hasOwnProperty(promoCode)) {
+            const discountValue = validPromoCodes[promoCode];
+            
+            // Calculate subtotal for discount
+            let subtotal = 0;
+            document.querySelectorAll('.cart-item').forEach(row => {
+                const checkbox = row.querySelector('.item-checkbox');
+                const itemTotalText = row.querySelector('.item-total').textContent;
+                if (checkbox && checkbox.checked) {
+                    subtotal += parseFloat(itemTotalText.replace('KSH', '').trim());
+                }
+            });
+            
+            // Calculate discount amount
+            if (discountValue < 1) {
+                // Percentage discount
+                currentDiscount = subtotal * discountValue;
+            } else {
+                // Fixed amount discount
+                currentDiscount = Math.min(discountValue, subtotal);
+            }
+            
+            promoSuccess.textContent = 'Promo code applied successfully!';
+            promoSuccess.classList.remove('d-none');
             updateCartSummary();
-            showNotification('Promo code applied successfully!', 'success');
+            showNotification('Promo code applied!', 'success');
         } else {
-            document.getElementById('promo-error').textContent = 'Invalid promo code';
-            document.getElementById('promo-error').classList.remove('d-none');
-            document.getElementById('promo-success').classList.add('d-none');
+            promoError.textContent = 'Invalid promo code';
+            promoError.classList.remove('d-none');
         }
     }
 
@@ -648,37 +711,36 @@
             return;
         }
         
-        checkedItems.forEach(row => {
-            row.style.opacity = '0.5';
-            setTimeout(() => {
-                row.remove();
-            }, 300);
-        });
+        // In a real implementation, you would send this to the backend
+        // For now, we'll just show a notification
+        showNotification(`${checkedItems.length} items saved for later`, 'info');
         
-        setTimeout(() => {
-            updateCartSummary();
-            showNotification('Items saved for later', 'info');
-        }, 400);
+        // You could implement this by creating a "SavedForLater" model
+        // or by adding a field to the Cart model
     }
 
     // Proceed to checkout
     function proceedToCheckout() {
-        const selectedItems = document.querySelectorAll('.item-checkbox:checked');
-        
-        if (selectedItems.length === 0) {
-            alert('Please select at least one item to checkout');
-            return;
-        }
-        
         // Validate shipping info
         const shippingAddress = document.getElementById('shipping-address').value.trim();
+        const contactEmail = document.getElementById('contact-email').value.trim();
+        
         if (!shippingAddress) {
             alert('Please enter your shipping address');
             return;
         }
         
+        if (!contactEmail) {
+            alert('Please enter your contact email');
+            return;
+        }
+        
         // Get selected payment method
-        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').id;
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked');
+        if (!paymentMethod) {
+            alert('Please select a payment method');
+            return;
+        }
         
         // Show loading state
         const checkoutBtn = document.querySelector('.btn-pv-primary.btn-lg');
@@ -686,15 +748,56 @@
         checkoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing...';
         checkoutBtn.disabled = true;
         
-        // Simulate API call
-        setTimeout(() => {
-            // Reset button
+        // Create form data
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+        formData.append('shipping_address', shippingAddress);
+        formData.append('contact_email', contactEmail);
+        formData.append('payment_method', paymentMethod.id);
+        
+        // Get selected items
+        const selectedItems = [];
+        document.querySelectorAll('.item-checkbox:checked').forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const itemId = row.dataset.itemId;
+            selectedItems.push(itemId);
+        });
+        
+        if (selectedItems.length === 0) {
+            alert('Please select at least one item to checkout');
             checkoutBtn.innerHTML = originalText;
             checkoutBtn.disabled = false;
-            
-            // Show payment modal
-            openPaymentModal();
-        }, 1500);
+            return;
+        }
+        
+        // Submit form
+        fetch('/checkout/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.json();
+            }
+        })
+        .then(data => {
+            if (data && data.error) {
+                showNotification(data.error, 'danger');
+                checkoutBtn.innerHTML = originalText;
+                checkoutBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error processing checkout', 'danger');
+            checkoutBtn.innerHTML = originalText;
+            checkoutBtn.disabled = false;
+        });
     }
 
     // Show notification
@@ -707,11 +810,16 @@
         
         // Create notification
         const notification = document.createElement('div');
-        notification.className = `alert alert-${type === 'success' ? 'success' : 'info'} cart-notification position-fixed`;
+        notification.className = `alert alert-${type === 'success' ? 'success' : type === 'danger' ? 'danger' : 'info'} cart-notification position-fixed`;
         notification.style.top = '100px';
         notification.style.right = '20px';
         notification.style.zIndex = '9999';
-        notification.textContent = message;
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
         
         document.body.appendChild(notification);
         
@@ -719,15 +827,6 @@
         setTimeout(() => {
             notification.remove();
         }, 3000);
-    }
-
-    // Select all items
-    function selectAllItems(selectAllCheckbox) {
-        const isChecked = selectAllCheckbox.checked;
-        document.querySelectorAll('.item-checkbox').forEach(checkbox => {
-            checkbox.checked = isChecked;
-        });
-        updateCartSummary();
     }
 </script>
 {% endblock %}
