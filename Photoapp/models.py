@@ -1,6 +1,12 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
+
+
+# Create a function to generate order numbers
+def generate_order_number():
+    return f"PV-{uuid.uuid4().hex[:8].upper()}"
 
 
 class Profile(models.Model):
@@ -34,8 +40,8 @@ class Photo(models.Model):
         User, 
         on_delete=models.CASCADE, 
         related_name="uploaded_photos",
-        null=True,  # Add null=True temporarily for migration
-        blank=True  # Add blank=True for forms
+        null=True,  # Keep null=True for now, we'll fix it later
+        blank=True
     )
     image = models.ImageField(upload_to='photos/')
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
@@ -46,15 +52,6 @@ class Photo(models.Model):
 
     def __str__(self):
         return f"{self.category} - KSH {self.price}"
-
-    def save(self, *args, **kwargs):
-        # If photographer is not set and the photo is being created by a user,
-        # set the photographer to the current user if they're a photographer
-        if not self.photographer and hasattr(self, '_current_user'):
-            profile = Profile.objects.filter(user=self._current_user).first()
-            if profile and profile.is_photographer:
-                self.photographer = self._current_user
-        super().save(*args, **kwargs)
 
     @property
     def is_available(self):
@@ -69,7 +66,7 @@ class Cart(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = ('user', 'photo')  # Prevent duplicate items in cart
+        unique_together = ('user', 'photo')
         ordering = ['-added_at']
 
     def __str__(self):
@@ -101,8 +98,134 @@ class Purchase(models.Model):
         return f"{self.user.username} - {self.photo.category} - KSH {self.amount_paid}"
 
     def save(self, *args, **kwargs):
-        # When a purchase is made, mark the photo as purchased
         if self.status == 'completed' and not self.photo.is_purchased:
             self.photo.is_purchased = True
             self.photo.save()
         super().save(*args, **kwargs)
+
+
+class PrintPrice(models.Model):
+    size = models.CharField(max_length=20, unique=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    framing_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    def __str__(self):
+        return f"{self.size} - KSH {self.price}"
+
+
+class PrintOrder(models.Model):
+    SIZE_CHOICES = [
+        ('4x6', '4x6 inches'),
+        ('5x7', '5x7 inches'),
+        ('8x10', '8x10 inches'),
+        ('11x14', '11x14 inches'),
+        ('16x20', '16x20 inches'),
+        ('20x30', '20x30 inches'),
+    ]
+    
+    PAPER_CHOICES = [
+        ('matte', 'Matte'),
+        ('glossy', 'Glossy'),
+        ('lustre', 'Lustre'),
+        ('metallic', 'Metallic'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('printed', 'Printed'),
+        ('shipped', 'Shipped'),
+        ('delivered', 'Delivered'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    SHIPPING_CHOICES = [
+        ('standard', 'Standard (5-7 days)'),
+        ('express', 'Express (2-3 days)'),
+        ('overnight', 'Overnight (1 day)'),
+    ]
+
+    # Order Information
+    order_number = models.CharField(max_length=20, unique=True, default=generate_order_number)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='print_orders')
+    
+    # Print Details
+    print_size = models.CharField(max_length=20, choices=SIZE_CHOICES, default='8x10')
+    paper_type = models.CharField(max_length=20, choices=PAPER_CHOICES, default='matte')
+    quantity = models.PositiveIntegerField(default=1)
+    framing = models.BooleanField(default=False)
+    frame_color = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Shipping Information
+    shipping_method = models.CharField(max_length=20, choices=SHIPPING_CHOICES, default='standard')
+    shipping_address = models.TextField()
+    shipping_city = models.CharField(max_length=100)
+    shipping_state = models.CharField(max_length=100)
+    shipping_zip = models.CharField(max_length=20)
+    shipping_country = models.CharField(max_length=100, default='Kenya')
+    
+    # Contact Information
+    contact_email = models.EmailField()
+    contact_phone = models.CharField(max_length=20)
+    
+    # Status and Tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status_updated = models.DateTimeField(auto_now=True)
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    estimated_delivery = models.DateField(blank=True, null=True)
+    
+    # Financial Information
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    tax = models.DecimalField(max_digits=10, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.order_number} - {self.user.username} - {self.get_status_display()}"
+    
+    @property
+    def is_digital(self):
+        return False
+    
+    @property
+    def item_count(self):
+        return self.printorderitem_set.count()
+
+
+class PrintOrderItem(models.Model):
+    order = models.ForeignKey(PrintOrder, on_delete=models.CASCADE)
+    photo = models.ForeignKey(Photo, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    notes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        unique_together = ('order', 'photo')
+    
+    def __str__(self):
+        return f"{self.order.order_number} - {self.photo.category}"
+    
+    @property
+    def total_price(self):
+        return self.unit_price * self.quantity
+
+
+class OrderStatusUpdate(models.Model):
+    order = models.ForeignKey(PrintOrder, on_delete=models.CASCADE, related_name='status_updates')
+    status = models.CharField(max_length=20, choices=PrintOrder.STATUS_CHOICES)
+    notes = models.TextField(blank=True, null=True)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.order.order_number} - {self.get_status_display()} - {self.created_at}"

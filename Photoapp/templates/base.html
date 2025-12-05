@@ -671,41 +671,573 @@
     </div>
 
     <!-- Order Modal -->
-    <div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Order Physical Prints</h5>
-                    <button type="button" class="btn-close close-btn" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="orderForm">
+   <!-- Order Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Order Physical Prints</h5>
+                <button type="button" class="btn-close close-btn" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="orderForm" method="POST" action="{% url 'create_print_order' %}" onsubmit="submitOrderForm(event)">
+                    {% csrf_token %}
+                    <input type="hidden" id="selected_photos" name="selected_photos">
+                    
+                    <!-- Step 1: Print Details -->
+                    <div class="order-step" id="step1">
+                        <h6 class="mb-3 text-pv-light"><i class="fas fa-print me-2"></i>Print Details</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Print Size</label>
+                                <select class="form-select" name="print_size" id="printSize" required>
+                                    <option value="">Select size</option>
+                                    <option value="4x6">4x6 inches - KSH 200</option>
+                                    <option value="5x7">5x7 inches - KSH 300</option>
+                                    <option value="8x10" selected>8x10 inches - KSH 500</option>
+                                    <option value="11x14">11x14 inches - KSH 800</option>
+                                    <option value="16x20">16x20 inches - KSH 1200</option>
+                                    <option value="20x30">20x30 inches - KSH 2000</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Paper Type</label>
+                                <select class="form-select" name="paper_type" required>
+                                    <option value="matte" selected>Matte</option>
+                                    <option value="glossy">Glossy</option>
+                                    <option value="lustre">Lustre</option>
+                                    <option value="metallic">Metallic</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Quantity per Photo</label>
+                                <input type="number" class="form-control" name="quantity" min="1" max="10" value="1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="framingCheck" name="framing">
+                                    <label class="form-check-label" for="framingCheck">
+                                        Add Framing (+KSH 500)
+                                    </label>
+                                </div>
+                                <div id="frameColorField" class="mt-2" style="display: none;">
+                                    <label class="form-label">Frame Color</label>
+                                    <select class="form-select" name="frame_color">
+                                        <option value="black">Black</option>
+                                        <option value="white">White</option>
+                                        <option value="brown">Brown</option>
+                                        <option value="silver">Silver</option>
+                                        <option value="gold">Gold</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Selected photos will be printed at the chosen size and paper type.
+                                <span id="selectedCount">0 photos selected</span>
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Shipping Information -->
+                    <div class="order-step" id="step2" style="display: none;">
+                        <h6 class="mb-3 text-pv-light"><i class="fas fa-shipping-fast me-2"></i>Shipping Information</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Shipping Method</label>
+                                <select class="form-select" name="shipping_method" id="shippingMethod" required onchange="updateOrderSummary()">
+                                    <option value="standard">Standard (5-7 days) - KSH 200</option>
+                                    <option value="express" selected>Express (2-3 days) - KSH 500</option>
+                                    <option value="overnight">Overnight (1 day) - KSH 1000</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Email</label>
+                                <input type="email" class="form-control" name="contact_email" value="{{ user.email }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Phone</label>
+                                <input type="tel" class="form-control" name="contact_phone" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Shipping City</label>
+                                <input type="text" class="form-control" name="shipping_city" required>
+                            </div>
+                        </div>
+                        
                         <div class="mb-3">
-                            <label class="form-label">Select Size</label>
-                            <select class="form-select" required>
-                                <option value="">Choose size</option>
-                                <option value="4x6">4x6 inches - $5.99</option>
-                                <option value="5x7">5x7 inches - $7.99</option>
-                                <option value="8x10">8x10 inches - $12.99</option>
-                                <option value="11x14">11x14 inches - $19.99</option>
-                            </select>
+                            <label class="form-label">Full Address</label>
+                            <textarea class="form-control" name="shipping_address" rows="3" required placeholder="Street address, apartment, suite, etc."></textarea>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" min="1" max="20" value="1" required>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">State/Region</label>
+                                <input type="text" class="form-control" name="shipping_state" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ZIP/Postal Code</label>
+                                <input type="text" class="form-control" name="shipping_zip" required>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Shipping Address</label>
-                            <textarea class="form-control" rows="3" required></textarea>
+                    </div>
+                    
+                    <!-- Step 3: Order Summary -->
+                    <div class="order-step" id="step3" style="display: none;">
+                        <h6 class="mb-3 text-pv-light"><i class="fas fa-receipt me-2"></i>Order Summary</h6>
+                        
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div id="orderSummary">
+                                    <!-- Dynamic content will be inserted here -->
+                                </div>
+                            </div>
                         </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn-pv-primary">Place Order</button>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                            <label class="form-check-label" for="termsCheck">
+                                I agree to the <a href="#" onclick="showTerms()">Terms and Conditions</a>
+                            </label>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                    
+                    <!-- Navigation Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-pv-outline" id="prevBtn" onclick="prevStep()" style="display: none;">
+                            <i class="fas fa-arrow-left me-1"></i> Previous
+                        </button>
+                        <button type="button" class="btn btn-pv-primary ms-auto" id="nextBtn" onclick="nextStep()">
+                            Next <i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                        <button type="submit" class="btn btn-pv-primary" id="submitBtn" style="display: none;">
+                            <i class="fas fa-check me-1"></i> Place Order
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
+
+<style>
+    .order-step {
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+</style>
+
+<script>
+    let currentStep = 1;
+    let selectedPhotoIds = [];
+    
+    // Global function to open order modal (can be overridden by page-specific functions)
+function globalOpenOrderModal(photoIds = null) {
+    // If no photoIds provided, try to get from selected checkboxes
+    if (!photoIds || photoIds.length === 0) {
+        // Try to get selected photos from checkboxes if they exist
+        if (typeof getSelectedPhotoIds === 'function') {
+            photoIds = getSelectedPhotoIds();
+        } else {
+            // Fallback: look for checkboxes on the page
+            const selectedCheckboxes = document.querySelectorAll('.photo-checkbox:checked');
+            photoIds = Array.from(selectedCheckboxes)
+                .map(checkbox => checkbox.value)
+                .filter(id => id);
+        }
+    }
+    
+    if (!photoIds || photoIds.length === 0) {
+        showNotification('Please select at least one photo to print', 'warning');
+        return;
+    }
+    
+    // Set the selected photos in the hidden input
+    const photosInput = document.getElementById('selected_photos');
+    if (photosInput) {
+        photosInput.value = photoIds.join(',');
+    }
+    
+    // Update the selected count display
+    const selectedCount = document.getElementById('selectedCount');
+    if (selectedCount) {
+        selectedCount.textContent = photoIds.length + ' photos selected';
+    }
+    
+    // Reset form steps
+    currentStep = 1;
+    showStep(currentStep);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('orderModal'));
+    modal.show();
+}
+
+// Helper function to show notification
+function showNotification(message, type) {
+    // Remove existing notification
+    const existingNotification = document.querySelector('.global-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} global-notification position-fixed`;
+    notification.style.top = '100px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Order modal step management
+
+
+// Show current step
+function showStep(step) {
+    // Hide all steps
+    document.querySelectorAll('.order-step').forEach(stepEl => {
+        stepEl.style.display = 'none';
+    });
+    
+    // Show current step
+    const stepElement = document.getElementById(`step${step}`);
+    if (stepElement) {
+        stepElement.style.display = 'block';
+    }
+    
+    // Update buttons
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (prevBtn) prevBtn.style.display = step > 1 ? 'block' : 'none';
+    if (nextBtn) nextBtn.style.display = step < 3 ? 'block' : 'none';
+    if (submitBtn) submitBtn.style.display = step === 3 ? 'block' : 'none';
+}
+
+// Next step
+function nextStep() {
+    if (validateStep(currentStep)) {
+        currentStep++;
+        showStep(currentStep);
+        if (currentStep === 3) {
+            updateOrderSummary();
+        }
+    }
+}
+
+// Previous step
+function prevStep() {
+    currentStep--;
+    showStep(currentStep);
+}
+
+// Validate current step
+function validateStep(step) {
+    const stepEl = document.getElementById(`step${step}`);
+    if (!stepEl) return false;
+    
+    const inputs = stepEl.querySelectorAll('[required]');
+    
+    for (let input of inputs) {
+        if (!input.value.trim()) {
+            showNotification(`Please fill in ${input.previousElementSibling?.textContent || 'this field'}`, 'warning');
+            input.focus();
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// Update order summary
+function updateOrderSummary() {
+    const selectedPhotos = document.getElementById('selected_photos')?.value;
+    if (!selectedPhotos) return;
+    
+    const photoIds = selectedPhotos.split(',').filter(id => id);
+    if (photoIds.length === 0) return;
+    
+    // Get form values
+    const size = document.getElementById('printSize')?.value || '8x10';
+    const quantity = parseInt(document.querySelector('[name="quantity"]')?.value) || 1;
+    const framing = document.getElementById('framingCheck')?.checked || false;
+    const shippingMethod = document.getElementById('shippingMethod')?.value || 'express';
+    
+    // Calculate prices
+    const sizePrices = {
+        '4x6': 200,
+        '5x7': 300,
+        '8x10': 500,
+        '11x14': 800,
+        '16x20': 1200,
+        '20x30': 2000
+    };
+    
+    const shippingPrices = {
+        'standard': 200,
+        'express': 500,
+        'overnight': 1000
+    };
+    
+    const framingPrice = framing ? 500 : 0;
+    const printPrice = sizePrices[size] || 500;
+    const shippingPrice = shippingPrices[shippingMethod] || 500;
+    
+    // Calculate totals
+    const subtotal = (printPrice + framingPrice) * photoIds.length * quantity;
+    const tax = subtotal * 0.08; // 8% tax
+    const total = subtotal + shippingPrice + tax;
+    
+    // Update summary display
+    const summaryElement = document.getElementById('orderSummary');
+    if (summaryElement) {
+        const summaryHTML = `
+            <div class="summary-item">
+                <span>${photoIds.length} Photos × ${quantity} prints each</span>
+                <span>KSH ${printPrice * photoIds.length * quantity}</span>
+            </div>
+            ${framing ? `
+            <div class="summary-item">
+                <span>Framing (${photoIds.length} photos)</span>
+                <span>KSH ${framingPrice * photoIds.length}</span>
+            </div>
+            ` : ''}
+            <div class="summary-item">
+                <span>Shipping (${document.getElementById('shippingMethod')?.options[document.getElementById('shippingMethod')?.selectedIndex]?.text || 'Express'})</span>
+                <span>KSH ${shippingPrice}</span>
+            </div>
+            <div class="summary-item">
+                <span>Tax (8%)</span>
+                <span>KSH ${tax.toFixed(2)}</span>
+            </div>
+            <div class="summary-item">
+                <span><strong>Total Amount</strong></span>
+                <span><strong class="text-pv-light">KSH ${total.toFixed(2)}</strong></span>
+            </div>
+        `;
+        summaryElement.innerHTML = summaryHTML;
+    }
+}
+
+// Toggle frame color field
+document.addEventListener('DOMContentLoaded', function() {
+    const framingCheck = document.getElementById('framingCheck');
+    const frameColorField = document.getElementById('frameColorField');
+    
+    if (framingCheck && frameColorField) {
+        framingCheck.addEventListener('change', function() {
+            frameColorField.style.display = this.checked ? 'block' : 'none';
+            updateOrderSummary();
+        });
+    }
+    
+    // Update summary when form changes
+    const printSize = document.getElementById('printSize');
+    const quantityInput = document.querySelector('[name="quantity"]');
+    const shippingMethod = document.getElementById('shippingMethod');
+    
+    if (printSize) printSize.addEventListener('change', updateOrderSummary);
+    if (quantityInput) quantityInput.addEventListener('input', updateOrderSummary);
+    if (shippingMethod) shippingMethod.addEventListener('change', updateOrderSummary);
+});
+    
+    // Show current step
+    function showStep(step) {
+        // Hide all steps
+        document.querySelectorAll('.order-step').forEach(stepEl => {
+            stepEl.style.display = 'none';
+        });
+        
+        // Show current step
+        document.getElementById(`step${step}`).style.display = 'block';
+        
+        // Update buttons
+        document.getElementById('prevBtn').style.display = step > 1 ? 'block' : 'none';
+        document.getElementById('nextBtn').style.display = step < 3 ? 'block' : 'none';
+        document.getElementById('submitBtn').style.display = step === 3 ? 'block' : 'none';
+    }
+    
+    // Next step
+    function nextStep() {
+        if (validateStep(currentStep)) {
+            currentStep++;
+            showStep(currentStep);
+            if (currentStep === 3) {
+                updateOrderSummary();
+            }
+        }
+    }
+    
+    // Previous step
+    function prevStep() {
+        currentStep--;
+        showStep(currentStep);
+    }
+    
+    // Validate current step
+    function validateStep(step) {
+        const stepEl = document.getElementById(`step${step}`);
+        const inputs = stepEl.querySelectorAll('[required]');
+        
+        for (let input of inputs) {
+            if (!input.value.trim()) {
+                showNotification(`Please fill in ${input.previousElementSibling.textContent}`, 'warning');
+                input.focus();
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    // Update order summary
+    function updateOrderSummary() {
+        if (selectedPhotoIds.length === 0) return;
+        
+        // Get form values
+        const size = document.getElementById('printSize').value;
+        const quantity = parseInt(document.querySelector('[name="quantity"]').value) || 1;
+        const framing = document.getElementById('framingCheck').checked;
+        const shippingMethod = document.getElementById('shippingMethod').value;
+        
+        // Calculate prices (these would come from backend in real app)
+        const sizePrices = {
+            '4x6': 200,
+            '5x7': 300,
+            '8x10': 500,
+            '11x14': 800,
+            '16x20': 1200,
+            '20x30': 2000
+        };
+        
+        const shippingPrices = {
+            'standard': 200,
+            'express': 500,
+            'overnight': 1000
+        };
+        
+        const framingPrice = framing ? 500 : 0;
+        const printPrice = sizePrices[size] || 500;
+        const shippingPrice = shippingPrices[shippingMethod] || 500;
+        
+        // Calculate totals
+        const subtotal = (printPrice + framingPrice) * selectedPhotoIds.length * quantity;
+        const tax = subtotal * 0.08; // 8% tax
+        const total = subtotal + shippingPrice + tax;
+        
+        // Update summary display
+        const summaryHTML = `
+            <div class="summary-item">
+                <span>${selectedPhotoIds.length} Photos × ${quantity} prints each</span>
+                <span>KSH ${printPrice * selectedPhotoIds.length * quantity}</span>
+            </div>
+            ${framing ? `
+            <div class="summary-item">
+                <span>Framing (${selectedPhotoIds.length} photos)</span>
+                <span>KSH ${framingPrice * selectedPhotoIds.length}</span>
+            </div>
+            ` : ''}
+            <div class="summary-item">
+                <span>Shipping (${document.getElementById('shippingMethod').options[document.getElementById('shippingMethod').selectedIndex].text})</span>
+                <span>KSH ${shippingPrice}</span>
+            </div>
+            <div class="summary-item">
+                <span>Tax (8%)</span>
+                <span>KSH ${tax.toFixed(2)}</span>
+            </div>
+            <div class="summary-item">
+                <span><strong>Total Amount</strong></span>
+                <span><strong class="text-pv-light">KSH ${total.toFixed(2)}</strong></span>
+            </div>
+        `;
+        
+        document.getElementById('orderSummary').innerHTML = summaryHTML;
+    }
+    
+    // Show terms modal
+    function showTerms() {
+        // Create and show terms modal
+        const termsModal = new bootstrap.Modal(document.createElement('div'));
+        termsModal._element.className = 'modal fade';
+        termsModal._element.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Terms and Conditions</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6>Print Order Terms</h6>
+                        <ul>
+                            <li>All prints are made with premium archival paper</li>
+                            <li>Returns accepted within 14 days of delivery</li>
+                            <li>Digital files remain your property</li>
+                            <li>Shipping times are estimates only</li>
+                            <li>Colors may vary slightly from screen to print</li>
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-pv-primary" data-bs-dismiss="modal">I Understand</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(termsModal._element);
+        termsModal.show();
+    }
+    
+    // Toggle frame color field
+    document.getElementById('framingCheck').addEventListener('change', function() {
+        document.getElementById('frameColorField').style.display = this.checked ? 'block' : 'none';
+        updateOrderSummary();
+    });
+    
+    // Update summary when form changes
+    document.getElementById('printSize').addEventListener('change', updateOrderSummary);
+    document.querySelector('[name="quantity"]').addEventListener('input', updateOrderSummary);
+</script>
 
     <!-- Admin Upload Modal -->
 <div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
@@ -894,6 +1426,74 @@
                 }
             });
         });
+        // Handle order form submission
+function submitOrderForm(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    // Get CSRF token
+    function getCSRFToken() {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Show loading state
+    const submitBtn = form.querySelector('#submitBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+    submitBtn.disabled = true;
+    
+    // Submit the form
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Print order #${data.order_number} created successfully!`, 'success');
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Redirect to track order page
+            if (data.redirect_url) {
+                setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                }, 1500);
+            }
+        } else {
+            showNotification('Error: ' + data.error, 'danger');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error creating print order', 'danger');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
         
         // Global functions
         function logout() {
@@ -907,7 +1507,7 @@
         }
         
         function openOrderModal() {
-            new bootstrap.Modal(document.getElementById('orderModal')).show();
+             globalOpenOrderModal();
         }
         
         function openUploadModal() {

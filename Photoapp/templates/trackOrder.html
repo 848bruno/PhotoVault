@@ -10,12 +10,12 @@
 {% endblock %}
 
 {% block sidebar %}
-    <nav class="sidebar">
+     <nav class="sidebar">
         <div class="sidebar-section">
             <h6 class="sidebar-section-title">Gallery</h6>
-            <a href="{% url 'client' %}" class="sidebar-link">
+            <a href="{% url 'client' %}" class="sidebar-link active">
                 <i class="fas fa-images"></i>
-                <span>Preview/Purchased</span>
+                <span>Gallery</span>
             </a>
             <a href="{% url 'cart' %}" class="sidebar-link">
                 <i class="fas fa-shopping-cart"></i>
@@ -26,12 +26,11 @@
         
         <div class="sidebar-section">
             <h6 class="sidebar-section-title">Orders</h6>
-            <a href="{% url 'trackOrder' %}" class="sidebar-link active">
+            <a href="{% url 'track_orders' %}" class="sidebar-link">
                 <i class="fas fa-shipping-fast"></i>
                 <span>Track Order</span>
-                <span class="badge bg-info rounded-pill ms-auto" id="active-orders-count">3</span>
             </a>
-            <a href="{% url 'orderHistory' %}" class="sidebar-link">
+            <a href="{% url 'order_history' %}" class="sidebar-link">
                 <i class="fas fa-history"></i>
                 <span>Order History</span>
             </a>
@@ -80,7 +79,7 @@
             <h3 class="text-contrast">
                 <i class="fas fa-truck me-2 text-pv-light"></i>
                 Active Orders
-                <span class="badge bg-pv-light ms-2" id="active-orders-badge">3 orders</span>
+                <span class="badge bg-pv-light ms-2" id="active-orders-badge">{{ active_orders.count }} orders</span>
             </h3>
             <button class="btn-pv-outline btn-sm" onclick="refreshOrders()">
                 <i class="fas fa-sync-alt me-1"></i>
@@ -90,69 +89,84 @@
 
         <!-- Order Tracking Cards -->
         <div class="row g-4" id="active-orders">
-            <!-- Order 1 - In Transit -->
+            {% for order in active_orders %}
             <div class="col-lg-6">
                 <div class="card h-100">
-                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-{{ order.status }} text-white d-flex justify-content-between align-items-center">
                         <div>
-                            <h5 class="mb-0">Order #PV-2024-001</h5>
-                            <small>Placed: Jan 10, 2024</small>
+                            <h5 class="mb-0">Order #{{ order.order_number }}</h5>
+                            <small>Placed: {{ order.created_at|date:"M d, Y" }}</small>
                         </div>
-                        <span class="badge bg-warning text-dark">In Transit</span>
+                        <span class="badge bg-{{ order.status }}">
+                            {{ order.get_status_display }}
+                        </span>
                     </div>
                     <div class="card-body">
                         <!-- Progress Timeline -->
                         <div class="order-timeline mb-4">
-                            <div class="timeline-step completed">
+                            {% for status_key, status_name in order.STATUS_CHOICES %}
+                            <div class="timeline-step {% if order.status_index >= forloop.counter %}completed{% elif order.status_index == forloop.counter0 %}active{% else %}pending{% endif %}">
                                 <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
+                                    <i class="fas {% if order.status_index >= forloop.counter %}fa-check{% elif order.status_index == forloop.counter0 %}fa-cog fa-spin{% else %}fa-clock{% endif %}"></i>
                                 </div>
                                 <div class="timeline-step-content">
-                                    <h6 class="mb-1">Order Placed</h6>
-                                    <small class="text-muted">Jan 10, 2024 • 10:30 AM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Processing</h6>
-                                    <small class="text-muted">Jan 11, 2024 • 9:15 AM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Printed</h6>
-                                    <small class="text-muted">Jan 12, 2024 • 2:45 PM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step active">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-shipping-fast"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Shipped</h6>
-                                    <small class="text-muted">Jan 13, 2024 • 11:20 AM</small>
-                                    <div class="alert alert-info p-2 mt-1 mb-0">
+                                    <h6 class="mb-1">{{ status_name }}</h6>
+                                    {% with order.status_updates.first as status_update %}
+                                    {% if status_update and status_update.status == status_key %}
+                                    <small class="text-muted">{{ status_update.created_at|date:"M d, Y • h:i A" }}</small>
+                                    {% if status_update.notes %}
+                                    <div class="alert alert-{{ status_key }} p-2 mt-1 mb-0">
                                         <small>
                                             <i class="fas fa-info-circle me-1"></i>
-                                            Expected delivery: Jan 17, 2024
+                                            {{ status_update.notes }}
                                         </small>
                                     </div>
+                                    {% endif %}
+                                    {% endif %}
+                                    {% endwith %}
                                 </div>
                             </div>
-                            <div class="timeline-step pending">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-home"></i>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Photo Thumbnails Section -->
+                        <div class="order-photos mb-3">
+                            <h6 class="mb-3">Order Photos ({{ order.printorderitem_set.count }}):</h6>
+                            <div class="row g-2">
+                                {% for item in order.printorderitem_set.all %}
+                                <div class="col-4 col-md-3">
+                                    <div class="photo-thumbnail-wrapper">
+                                        <img src="{{ item.photo.image.url }}" 
+                                             alt="{{ item.photo.category }}" 
+                                             class="photo-thumbnail"
+                                             data-bs-toggle="modal" 
+                                             data-bs-target="#photoModal{{ item.id }}">
+                                        <div class="photo-thumbnail-overlay">
+                                            <small class="text-white">{{ item.photo.category }}</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Modal for larger view -->
+                                    <div class="modal fade" id="photoModal{{ item.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">{{ item.photo.category }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <img src="{{ item.photo.image.url }}" 
+                                                         alt="{{ item.photo.category }}" 
+                                                         class="img-fluid">
+                                                    <p class="mt-3"><strong>Description:</strong> {{ item.photo.description|default:"No description" }}</p>
+                                                    <p><strong>Price:</strong> KSH {{ item.unit_price|floatformat:2 }}</p>
+                                                    <p><strong>Quantity:</strong> {{ item.quantity }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Delivered</h6>
-                                    <small class="text-muted">Pending</small>
-                                </div>
+                                {% endfor %}
                             </div>
                         </div>
 
@@ -161,258 +175,66 @@
                             <h6 class="mb-3">Order Details:</h6>
                             <div class="row">
                                 <div class="col-6 mb-2">
-                                    <small class="text-muted">Items:</small>
-                                    <p class="mb-0 fw-bold">2 Photos</p>
+                                    <small class="text-muted">Print Size:</small>
+                                    <p class="mb-0 fw-bold">{{ order.get_print_size_display }}</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Paper Type:</small>
+                                    <p class="mb-0">{{ order.get_paper_type_display }}</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Quantity:</small>
+                                    <p class="mb-0 fw-bold">{{ order.quantity }} prints each</p>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">Framing:</small>
+                                    <p class="mb-0">{{ order.framing|yesno:"Yes,No" }}{% if order.framing %} ({{ order.frame_color|default:"Standard" }}){% endif %}</p>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <small class="text-muted">Total:</small>
-                                    <p class="mb-0 fw-bold text-pv-light">$45.98</p>
+                                    <p class="mb-0 fw-bold text-pv-light">KSH {{ order.total_amount|floatformat:2 }}</p>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <small class="text-muted">Shipping:</small>
-                                    <p class="mb-0">Express (2-3 days)</p>
+                                    <p class="mb-0">{{ order.get_shipping_method_display }}</p>
                                 </div>
-                                <div class="col-6 mb-2">
+                                {% if order.tracking_number %}
+                                <div class="col-12 mb-2">
                                     <small class="text-muted">Tracking #:</small>
-                                    <p class="mb-0">TRK-789456123</p>
+                                    <p class="mb-0">{{ order.tracking_number }}</p>
                                 </div>
+                                {% endif %}
                             </div>
                             <div class="mt-3">
                                 <small class="text-muted">Shipping Address:</small>
-                                <p class="mb-0">123 Main St, San Francisco, CA 94107</p>
+                                <p class="mb-0">{{ order.shipping_address }}, {{ order.shipping_city }}, {{ order.shipping_state }} {{ order.shipping_zip }}</p>
                             </div>
                         </div>
                     </div>
                     <div class="card-footer bg-pv-very-light">
                         <div class="d-flex justify-content-between">
-                            <button class="btn btn-sm btn-pv-outline" onclick="viewOrderDetails('PV-2024-001')">
+                            <button class="btn btn-sm btn-pv-outline" onclick="viewOrderDetails({{ order.id }})">
                                 <i class="fas fa-eye me-1"></i>
                                 View Details
                             </button>
-                            <button class="btn btn-sm btn-pv-primary" onclick="openOrderModal()">
+                            {% if order.status == 'delivered' %}
+                            <button class="btn btn-sm btn-pv-primary" onclick="reorder({{ order.id }})">
                                 <i class="fas fa-print me-1"></i>
                                 Reorder
                             </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Order 2 - Processing -->
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-0">Order #PV-2024-002</h5>
-                            <small>Placed: Jan 15, 2024</small>
-                        </div>
-                        <span class="badge bg-info">Processing</span>
-                    </div>
-                    <div class="card-body">
-                        <!-- Progress Timeline -->
-                        <div class="order-timeline mb-4">
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Order Placed</h6>
-                                    <small class="text-muted">Jan 15, 2024 • 3:45 PM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step active">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-cog fa-spin"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Processing</h6>
-                                    <small class="text-muted">In progress</small>
-                                    <div class="alert alert-primary p-2 mt-1 mb-0">
-                                        <small>
-                                            <i class="fas fa-clock me-1"></i>
-                                            Expected to ship: Tomorrow
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="timeline-step pending">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-print"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Printed</h6>
-                                    <small class="text-muted">Pending</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step pending">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-shipping-fast"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Shipped</h6>
-                                    <small class="text-muted">Pending</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step pending">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-home"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Delivered</h6>
-                                    <small class="text-muted">Pending</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Order Details -->
-                        <div class="order-details">
-                            <h6 class="mb-3">Order Details:</h6>
-                            <div class="row">
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Items:</small>
-                                    <p class="mb-0 fw-bold">1 Photo</p>
-                                </div>
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Total:</small>
-                                    <p class="mb-0 fw-bold text-pv-light">$22.99</p>
-                                </div>
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Shipping:</small>
-                                    <p class="mb-0">Standard (5-7 days)</p>
-                                </div>
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Tracking #:</small>
-                                    <p class="mb-0 text-muted">Will be assigned</p>
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <small class="text-muted">Shipping Address:</small>
-                                <p class="mb-0">456 Oak Ave, Los Angeles, CA 90001</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-pv-very-light">
-                        <div class="d-flex justify-content-between">
-                            <button class="btn btn-sm btn-pv-outline" onclick="viewOrderDetails('PV-2024-002')">
-                                <i class="fas fa-eye me-1"></i>
-                                View Details
-                            </button>
-                            <button class="btn btn-sm btn-pv-outline" onclick="cancelOrder('PV-2024-002')">
-                                <i class="fas fa-times me-1"></i>
-                                Cancel Order
-                            </button>
-                        </div>
-                    </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    You don't have any active orders. Start by purchasing some photos!
                 </div>
             </div>
-
-            <!-- Order 3 - Delivered -->
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-0">Order #PV-2023-156</h5>
-                            <small>Placed: Dec 28, 2023</small>
-                        </div>
-                        <span class="badge bg-success">Delivered</span>
-                    </div>
-                    <div class="card-body">
-                        <!-- Progress Timeline -->
-                        <div class="order-timeline mb-4">
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Order Placed</h6>
-                                    <small class="text-muted">Dec 28, 2023 • 2:30 PM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Processing</h6>
-                                    <small class="text-muted">Dec 29, 2023 • 10:15 AM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Printed</h6>
-                                    <small class="text-muted">Dec 30, 2023 • 3:45 PM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Shipped</h6>
-                                    <small class="text-muted">Jan 2, 2024 • 11:20 AM</small>
-                                </div>
-                            </div>
-                            <div class="timeline-step completed">
-                                <div class="timeline-step-circle">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <div class="timeline-step-content">
-                                    <h6 class="mb-1">Delivered</h6>
-                                    <small class="text-muted">Jan 5, 2024 • 2:15 PM</small>
-                                    <div class="alert alert-success p-2 mt-1 mb-0">
-                                        <small>
-                                            <i class="fas fa-check-circle me-1"></i>
-                                            Delivered to front door
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Order Details -->
-                        <div class="order-details">
-                            <h6 class="mb-3">Order Details:</h6>
-                            <div class="row">
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Items:</small>
-                                    <p class="mb-0 fw-bold">3 Photos</p>
-                                </div>
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Total:</small>
-                                    <p class="mb-0 fw-bold text-pv-light">$67.97</p>
-                                </div>
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Shipping:</small>
-                                    <p class="mb-0">Overnight</p>
-                                </div>
-                                <div class="col-6 mb-2">
-                                    <small class="text-muted">Tracking #:</small>
-                                    <p class="mb-0">TRK-123456789</p>
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <small class="text-muted">Delivered To:</small>
-                                <p class="mb-0">789 Pine St, Seattle, WA 98101</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-pv-very-light">
-                        <div class="d-flex justify-content-between">
-                            <button class="btn btn-sm btn-pv-outline" onclick="viewOrderDetails('PV-2023-156')">
-                                <i class="fas fa-eye me-1"></i>
-                                View Details
-                            </button>
-                            <button class="btn btn-sm btn-pv-primary" onclick="openOrderModal()">
-                                <i class="fas fa-print me-1"></i>
-                                Reorder
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {% endfor %}
         </div>
     </div>
 
@@ -421,94 +243,33 @@
         <div class="card-header bg-pv-deep text-white">
             <h5 class="mb-0">
                 <i class="fas fa-chart-line me-2"></i>
-                Delivery Statistics
+                Order Statistics
             </h5>
         </div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3 col-6 text-center mb-3">
                     <div class="stat-card">
-                        <div class="stat-number text-pv-light">12</div>
+                        <div class="stat-number text-pv-light">{{ total_orders }}</div>
                         <div class="stat-label">Total Orders</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 text-center mb-3">
                     <div class="stat-card">
-                        <div class="stat-number text-success">95%</div>
-                        <div class="stat-label">On-Time Delivery</div>
+                        <div class="stat-number text-success">{{ delivered_orders }}</div>
+                        <div class="stat-label">Delivered</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 text-center mb-3">
                     <div class="stat-card">
-                        <div class="stat-number text-info">2.3</div>
-                        <div class="stat-label">Avg Delivery Days</div>
+                        <div class="stat-number text-info">{{ active_orders.count }}</div>
+                        <div class="stat-label">Active</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6 text-center mb-3">
                     <div class="stat-card">
-                        <div class="stat-number text-pv-light">$489</div>
+                        <div class="stat-number text-pv-light">KSH {{ total_spent|floatformat:2 }}</div>
                         <div class="stat-label">Total Spent</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Shipping Information -->
-    <div class="card">
-        <div class="card-header bg-pv-very-light">
-            <h5 class="mb-0">
-                <i class="fas fa-info-circle me-2 text-pv-light"></i>
-                Shipping Information & Support
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <h6><i class="fas fa-clock me-2 text-pv-light"></i>Processing Times</h6>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-check text-success me-2"></i>Digital orders: Instant delivery</li>
-                        <li><i class="fas fa-check text-success me-2"></i>Print orders: 1-2 business days</li>
-                        <li><i class="fas fa-check text-success me-2"></i>Custom framing: +2-3 business days</li>
-                    </ul>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <h6><i class="fas fa-shipping-fast me-2 text-pv-light"></i>Shipping Options</h6>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-truck me-2 text-muted"></i>Standard: 5-7 business days</li>
-                        <li><i class="fas fa-bolt me-2 text-muted"></i>Express: 2-3 business days</li>
-                        <li><i class="fas fa-rocket me-2 text-muted"></i>Overnight: 1 business day</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <h6><i class="fas fa-headset me-2 text-pv-light"></i>Need Help?</h6>
-                    <p class="mb-2">Contact our support team for tracking issues:</p>
-                    <button class="btn btn-pv-outline btn-sm me-2" onclick="contactSupport()">
-                        <i class="fas fa-comment-alt me-1"></i>
-                        Live Chat
-                    </button>
-                    <button class="btn btn-pv-outline btn-sm" onclick="openSupportModal()">
-                        <i class="fas fa-envelope me-1"></i>
-                        Email Support
-                    </button>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <h6><i class="fas fa-map-marker-alt me-2 text-pv-light"></i>Carrier Links</h6>
-                    <div class="d-flex gap-2">
-                        <a href="#" class="btn btn-outline-primary btn-sm">
-                            <i class="fab fa-ups me-1"></i>
-                            UPS
-                        </a>
-                        <a href="#" class="btn btn-outline-success btn-sm">
-                            <i class="fab fa-fedex me-1"></i>
-                            FedEx
-                        </a>
-                        <a href="#" class="btn btn-outline-danger btn-sm">
-                            <i class="fas fa-truck me-1"></i>
-                            USPS
-                        </a>
                     </div>
                 </div>
             </div>
@@ -516,294 +277,183 @@
     </div>
 </div>
 
+<!-- Add CSS for thumbnails -->
 <style>
-    /* Track Order specific styles */
-    .track-header {
-        border-bottom: 2px solid var(--pv-light-green);
-    }
-
-    .order-timeline {
+    /* Photo thumbnail styling */
+    .photo-thumbnail-wrapper {
         position: relative;
-        padding-left: 30px;
+        border-radius: 8px;
+        overflow: hidden;
+        aspect-ratio: 1/1;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        border: 2px solid #f8f9fa;
+        background-color: #f8f9fa;
     }
-
-    .order-timeline::before {
-        content: '';
+    
+    .photo-thumbnail-wrapper:hover {
+        transform: scale(1.05);
+        border-color: var(--pv-light);
+    }
+    
+    .photo-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* This prevents stretching while maintaining aspect ratio */
+        display: block;
+    }
+    
+    .photo-thumbnail-overlay {
         position: absolute;
-        left: 15px;
-        top: 0;
         bottom: 0;
-        width: 2px;
-        background-color: var(--border-color);
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 4px 8px;
+        text-align: center;
     }
-
+    
+    .photo-thumbnail-overlay small {
+        font-size: 0.7rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+    
+    /* For photo modal */
+    .modal-body img {
+        max-height: 60vh;
+        object-fit: contain;
+        width: 100%;
+    }
+    
+    /* Timeline styling */
     .timeline-step {
         position: relative;
-        margin-bottom: 25px;
+        padding-left: 30px;
+        margin-bottom: 15px;
     }
-
-    .timeline-step:last-child {
-        margin-bottom: 0;
-    }
-
+    
     .timeline-step-circle {
         position: absolute;
-        left: -30px;
+        left: 0;
         top: 0;
-        width: 30px;
-        height: 30px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
         font-size: 12px;
-        z-index: 2;
     }
-
+    
     .timeline-step.completed .timeline-step-circle {
-        background-color: var(--pv-light-green);
+        background-color: var(--pv-success);
+        color: white;
     }
-
+    
     .timeline-step.active .timeline-step-circle {
-        background-color: var(--pv-medium-green);
-        animation: pulse 2s infinite;
+        background-color: var(--pv-light);
+        color: white;
     }
-
+    
     .timeline-step.pending .timeline-step-circle {
-        background-color: var(--text-muted);
+        background-color: #e9ecef;
+        color: #6c757d;
     }
-
-    .timeline-step-content {
-        padding-left: 10px;
-    }
-
-    @keyframes pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
-        }
-        70% {
-            box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
-        }
-        100% {
-            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
-        }
-    }
-
+    
+    /* Status badge colors */
+    .bg-pending { background-color: #ffc107 !important; }
+    .bg-processing { background-color: #0dcaf0 !important; }
+    .bg-printed { background-color: #0d6efd !important; }
+    .bg-shipped { background-color: #198754 !important; }
+    .bg-delivered { background-color: #198754 !important; }
+    .bg-cancelled { background-color: #dc3545 !important; }
+    
+    /* Stat cards */
     .stat-card {
         padding: 15px;
-        background-color: var(--bg-surface);
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background-color: var(--pv-very-light);
     }
-
+    
     .stat-number {
-        font-size: 2.5rem;
+        font-size: 1.8rem;
         font-weight: bold;
         line-height: 1;
     }
-
+    
     .stat-label {
-        color: var(--text-muted);
         font-size: 0.9rem;
+        color: #6c757d;
         margin-top: 5px;
-    }
-
-    /* Card status colors */
-    .card-header.bg-success {
-        background-color: var(--pv-light-green) !important;
-    }
-
-    .card-header.bg-info {
-        background-color: #17a2b8 !important;
-    }
-
-    .card-header.bg-primary {
-        background-color: var(--pv-medium-green) !important;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .track-header {
-            padding: 20px 15px;
-        }
-        
-        .order-timeline {
-            padding-left: 25px;
-        }
-        
-        .timeline-step-circle {
-            width: 25px;
-            height: 25px;
-            left: -25px;
-        }
-        
-        .stat-number {
-            font-size: 2rem;
-        }
     }
 </style>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        updateOrderCounts();
-        loadCartFromStorage();
-    });
-
-    // Update order counts
-    function updateOrderCounts() {
-        const activeOrders = document.querySelectorAll('#active-orders .card').length;
-        document.getElementById('active-orders-count').textContent = activeOrders;
-        document.getElementById('active-orders-badge').textContent = activeOrders + ' order' + (activeOrders !== 1 ? 's' : '');
-    }
-
-    // Search order
+    // Search order by number
     function searchOrder() {
-        const searchTerm = document.getElementById('order-search').value.trim();
-        if (!searchTerm) {
+        const orderNumber = document.getElementById('order-search').value.trim();
+        if (!orderNumber) {
             showNotification('Please enter an order number', 'warning');
             return;
         }
         
-        // Simulate search
-        showNotification(`Searching for order: ${searchTerm}`, 'info');
-        
-        // In a real app, this would make an API call
-        setTimeout(() => {
-            showNotification('Order found! Loading details...', 'success');
-            // Redirect to order details page
-            // window.location.href = `/order-details/${searchTerm}/`;
-        }, 1000);
+        // In a real implementation, this would search in the database
+        window.location.href = `/track-order/search/?q=${encodeURIComponent(orderNumber)}`;
     }
-
-    // Refresh orders
-    function refreshOrders() {
-        const refreshBtn = document.querySelector('[onclick="refreshOrders()"]');
-        const originalText = refreshBtn.innerHTML;
-        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Refreshing...';
-        refreshBtn.disabled = true;
-        
-        // Simulate API refresh
-        setTimeout(() => {
-            refreshBtn.innerHTML = originalText;
-            refreshBtn.disabled = false;
-            showNotification('Orders refreshed successfully', 'success');
-        }, 1500);
-    }
-
+    
     // View order details
     function viewOrderDetails(orderId) {
-        showNotification(`Loading order ${orderId} details...`, 'info');
-        // In a real app, this would open a modal or redirect
-        // openOrderDetailsModal(orderId);
+        window.location.href = `/track-order/${orderId}/`;
     }
-
-    // Cancel order
-    function cancelOrder(orderId) {
-        if (confirm(`Are you sure you want to cancel order ${orderId}?`)) {
-            showNotification(`Cancelling order ${orderId}...`, 'info');
-            
-            // Simulate API call
-            setTimeout(() => {
-                showNotification(`Order ${orderId} has been cancelled`, 'success');
-                // In a real app, this would update the UI
-            }, 1000);
+    
+    // Reorder function
+    function reorder(orderId) {
+        if (confirm('Would you like to reorder these photos with the same settings?')) {
+            // AJAX call to reorder
+            fetch(`/reorder/${orderId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Reorder created successfully!', 'success');
+                    window.location.href = `/track-order/${data.new_order_id}/`;
+                } else {
+                    showNotification(data.error || 'Failed to reorder', 'error');
+                }
+            })
+            .catch(error => {
+                showNotification('Network error', 'error');
+            });
         }
     }
-
-    // Contact support
-    function contactSupport() {
-        showNotification('Opening live chat...', 'info');
-        // In a real app, this would open a chat widget
+    
+    // Refresh orders
+    function refreshOrders() {
+        location.reload();
     }
-
-    // Open support modal
-    function openSupportModal() {
-        // Create and show support modal
-        const modalHTML = `
-            <div class="modal fade" id="supportModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Contact Support</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">Order Number</label>
-                                <input type="text" class="form-control" placeholder="e.g., PV-2024-001">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Issue</label>
-                                <select class="form-select">
-                                    <option>Tracking Issue</option>
-                                    <option>Delivery Delay</option>
-                                    <option>Damaged Package</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Message</label>
-                                <textarea class="form-control" rows="4" placeholder="Describe your issue..."></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn-pv-primary" onclick="submitSupportRequest()">Submit</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('supportModal');
-        if (existingModal) {
-            existingModal.remove();
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
-        
-        // Add modal to body
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        
-        // Show modal
-        new bootstrap.Modal(document.getElementById('supportModal')).show();
-    }
-
-    // Submit support request
-    function submitSupportRequest() {
-        showNotification('Support request submitted. We\'ll contact you within 24 hours.', 'success');
-        bootstrap.Modal.getInstance(document.getElementById('supportModal')).hide();
-    }
-
-    // Show notification
-    function showNotification(message, type) {
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} notification position-fixed`;
-        notification.style.top = '100px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
-        notification.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
-                <span>${message}</span>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    // Load cart from storage (for sidebar count)
-    function loadCartFromStorage() {
-        const savedCart = localStorage.getItem('photovault_cart');
-        if (savedCart) {
-            const cartItems = JSON.parse(savedCart);
-            const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-            document.getElementById('sidebar-cart-count').textContent = totalItems;
-        }
+        return cookieValue;
     }
 </script>
 {% endblock %}

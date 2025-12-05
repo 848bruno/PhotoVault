@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Orders - PhotoVault{% endblock %}
+
+{% block auth_buttons %}
+    <button class="btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline">Log Out</span>
+    </button>
+{% endblock %}
+
+{% block sidebar %}
+    <!-- Include admin sidebar -->
+      <nav class="sidebar">
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Dashboard</h6>
+            <a href="{% url 'admin' %}" class="sidebar-link active">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Overview</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Sales & Analytics</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Sales Analytics</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-chart-pie"></i>
+                <span>Revenue Reports</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Orders</h6>
+            <a href="{% url 'admin_orders' %}" class="sidebar-link">
+                <i class="fas fa-shopping-bag"></i>
+                <span>Manage Orders</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="pending-orders-count">{{ orders.count }}</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-clock"></i>
+                <span>Pending Orders</span>
+                <span class="badge bg-warning rounded-pill ms-auto" id="pending-orders-badge">{{ pending_count|default:"0" }}</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Payments</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-credit-card"></i>
+                <span>Payment Processing</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-receipt"></i>
+                <span>Transactions</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Clients</h6>
+            <a href="{% url 'clientManage' %}" class="sidebar-link">
+                <i class="fas fa-users"></i>
+                <span>Client Management</span>
+            </a>
+            <a href="#" class="sidebar-link" onclick="openUploadModal()">
+                <i class="fas fa-user-plus"></i>
+                <span>Add New Client</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Content</h6>
+            <a href="{% url 'upload_photos' %}" class="sidebar-link">
+                <i class="fas fa-upload"></i>
+                <span>Upload Photos</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-photo-video"></i>
+                <span>Photo Library</span>
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Orders Header -->
+    <div class="dashboard-header bg-pv-very-light py-4 px-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="h2 mb-0 text-pv-deep">
+                    <i class="fas fa-shopping-bag me-2"></i>
+                    Manage Orders
+                </h1>
+                <p class="text-muted mb-0 mt-2">Process and track customer print orders</p>
+                <p class="text-muted small mb-0">{{ orders.count }} orders found</p>
+            </div>
+            <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                <div class="dropdown">
+                    <button class="btn btn-pv-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-filter me-2"></i>
+                        {% if status_filter %}
+                            {{ status_filter|title }} Orders
+                        {% else %}
+                            Filter by Status
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item {% if not status_filter %}active{% endif %}" 
+                               href="{% url 'admin_orders' %}">All Orders</a></li>
+                        {% for status_key, status_name in PrintOrder.STATUS_CHOICES %}
+                        <li><a class="dropdown-item {% if status_filter == status_key %}active{% endif %}" 
+                               href="{% url 'admin_orders' %}?status={{ status_key }}">
+                            {{ status_name }}
+                        </a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <button class="sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-pv-light">
+                    <i class="fas fa-clock text-white"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ pending_count|default:"0" }}</div>
+                    <div class="stat-label">Pending Orders</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-info">
+                    <i class="fas fa-cog text-white"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ orders|dictsort:"status"|length|default:"0" }}</div>
+                    <div class="stat-label">Processing</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success">
+                    <i class="fas fa-truck text-white"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ orders|dictsort:"status"|length|default:"0" }}</div>
+                    <div class="stat-label">Shipped</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-pv-deep">
+                    <i class="fas fa-money-bill-wave text-white"></i>
+                </div>
+                <div class="stat-content">
+                    {% with total_revenue=orders|dictsort:"total_amount"|length|default:"0" %}
+                    <div class="stat-number">KSH {{ total_revenue }}</div>
+                    {% endwith %}
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders List -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr class="bg-pv-very-light">
+                            <th class="ps-4">Order #</th>
+                            <th>Client</th>
+                            <th>Photos</th>
+                            <th>Print Details</th>
+                            <th>Shipping</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr data-order-id="{{ order.id }}" class="order-row">
+                            <td class="ps-4">
+                                <strong class="d-block">{{ order.order_number }}</strong>
+                                <small class="text-muted">{{ order.created_at|date:"M d, Y • h:i A" }}</small>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="client-avatar me-2">
+                                        <i class="fas fa-user-circle fa-lg text-pv-light"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">{{ order.user.get_full_name|default:order.user.username }}</div>
+                                        <small class="text-muted d-block">{{ order.contact_email }}</small>
+                                        <small class="text-muted">{{ order.contact_phone }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="order-photos-thumbs">
+                                    {% for item in order.printorderitem_set.all|slice:":3" %}
+                                    <div class="order-photo-thumb-wrapper" 
+                                         data-bs-toggle="tooltip" 
+                                         title="{{ item.photo.category }}">
+                                        <img src="{{ item.photo.image.url }}" 
+                                             alt="{{ item.photo.category }}"
+                                             class="order-photo-thumb"
+                                             onerror="this.src='/static/images/default-photo.png'">
+                                    </div>
+                                    {% endfor %}
+                                    {% if order.item_count > 3 %}
+                                    <div class="more-photos-badge">
+                                        <span class="badge bg-secondary">+{{ order.item_count|add:"-3" }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="order-details-small">
+                                    <span class="badge bg-pv-very-light text-pv-deep">{{ order.get_print_size_display }}</span>
+                                    <small class="d-block mt-1">{{ order.get_paper_type_display }}</small>
+                                    <small class="d-block">Qty: {{ order.quantity }} each</small>
+                                    {% if order.framing %}
+                                    <small class="d-block text-success">
+                                        <i class="fas fa-frame me-1"></i>Framed
+                                        {% if order.frame_color %}
+                                        ({{ order.frame_color }})
+                                        {% endif %}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <small class="d-block fw-medium">{{ order.get_shipping_method_display }}</small>
+                                <small class="d-block text-muted">{{ order.shipping_city }}, {{ order.shipping_state }}</small>
+                                {% if order.estimated_delivery %}
+                                <small class="d-block text-success">
+                                    <i class="far fa-calendar-alt me-1"></i>
+                                    Est: {{ order.estimated_delivery|date:"M d" }}
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-bold text-pv-light">KSH {{ order.total_amount|floatformat:2 }}</span>
+                                <small class="d-block text-muted">Paid</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ order.status }} badge-status" id="status-badge-{{ order.id }}">
+                                    {{ order.get_status_display }}
+                                </span>
+                                {% if order.status_updated %}
+                                <small class="d-block text-muted">
+                                    {{ order.status_updated|timesince }} ago
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group action-buttons">
+                                    <button class="btn btn-sm btn-pv-outline" 
+                                            onclick="viewOrderDetails({{ order.id }})"
+                                            data-bs-toggle="tooltip"
+                                            title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-pv-primary dropdown-toggle" 
+                                            type="button" 
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="outside"
+                                            aria-expanded="false"
+                                            data-bs-toggle="tooltip"
+                                            title="Change Status">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li class="dropdown-header">Update Status</li>
+                                        {% for status_key, status_name in PrintOrder.STATUS_CHOICES %}
+                                        <li>
+                                            <a class="dropdown-item {% if order.status == status_key %}active{% endif %}" 
+                                               href="#" 
+                                               onclick="updateOrderStatus({{ order.id }}, '{{ status_key }}')">
+                                                <i class="fas fa-circle me-2 text-{{ status_key }}"></i>
+                                                Mark as {{ status_name }}
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="sendNotification({{ order.id }})">
+                                                <i class="fas fa-bell me-2"></i>
+                                                Send Update
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#" 
+                                               onclick="cancelOrder({{ order.id }})">
+                                                <i class="fas fa-times me-2"></i>
+                                                Cancel Order
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fas fa-shopping-bag fa-3x mb-3"></i>
+                                    <h5>No orders found</h5>
+                                    <p class="mb-3">When customers place print orders, they'll appear here.</p>
+                                    <a href="{% url 'admin' %}" class="btn btn-pv-primary">
+                                        <i class="fas fa-arrow-left me-2"></i>
+                                        Back to Dashboard
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if orders.has_other_pages %}
+        <div class="card-footer bg-pv-very-light">
+            <nav aria-label="Order pagination">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if orders.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in orders.paginator.page_range %}
+                    <li class="page-item {% if orders.number == i %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ i }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if orders.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Modal content will be loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- Add CSS for thumbnails and styling -->
+<style>
+    /* Order photo thumbnails */
+    .order-photos-thumbs {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .order-photo-thumb-wrapper {
+        width: 50px;
+        height: 50px;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 2px solid var(--pv-very-light);
+        flex-shrink: 0;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .order-photo-thumb-wrapper:hover {
+        border-color: var(--pv-light);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .order-photo-thumb {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    
+    .more-photos-badge {
+        margin-left: 4px;
+    }
+    
+    /* Order row styling */
+    .order-row:hover {
+        background-color: var(--pv-very-light);
+    }
+    
+    /* Status badge colors */
+    .badge-status {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 12px;
+    }
+    
+    .bg-pending { background-color: #ffc107 !important; color: #000; }
+    .bg-processing { background-color: #0dcaf0 !important; color: #000; }
+    .bg-printed { background-color: #0d6efd !important; color: #fff; }
+    .bg-shipped { background-color: #20c997 !important; color: #fff; }
+    .bg-delivered { background-color: #198754 !important; color: #fff; }
+    .bg-cancelled { background-color: #dc3545 !important; color: #fff; }
+    
+    /* Stat cards */
+    .stat-card {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid var(--pv-very-light);
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .stat-content {
+        flex-grow: 1;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1;
+        color: var(--pv-deep);
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+    
+    /* Client avatar */
+    .client-avatar {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--pv-very-light);
+        border-radius: 50%;
+    }
+    
+    /* Action buttons */
+    .action-buttons .btn {
+        padding: 6px 10px;
+        font-size: 0.875rem;
+    }
+    
+    /* Small order details */
+    .order-details-small {
+        font-size: 0.85rem;
+    }
+    
+    /* Table improvements */
+    .table th {
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--pv-deep);
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+    
+    /* Hover effects for status dropdown items */
+    .dropdown-item:hover .fa-circle {
+        transform: scale(1.2);
+        transition: transform 0.2s ease;
+    }
+    
+    /* Status text colors */
+    .text-pending { color: #ffc107; }
+    .text-processing { color: #0dcaf0; }
+    .text-printed { color: #0d6efd; }
+    .text-shipped { color: #20c997; }
+    .text-delivered { color: #198754; }
+    .text-cancelled { color: #dc3545; }
+</style>
+
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+    
+    // Update order status
+    function updateOrderStatus(orderId, newStatus) {
+        const notes = prompt('Add status notes (optional):');
+        
+        if (notes === null) return; // User cancelled
+        
+        fetch(`/admin/orders/${orderId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                status: newStatus,
+                notes: notes || ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const statusBadge = document.getElementById(`status-badge-${orderId}`);
+                statusBadge.textContent = data.new_status;
+                statusBadge.className = `badge bg-${newStatus} badge-status`;
+                
+                // Update the badge in the current row
+                const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+                const timeAgoElement = row.querySelector('.text-muted');
+                if (timeAgoElement) {
+                    timeAgoElement.textContent = 'just now';
+                }
+                
+                showNotification(`Order #${orderId} status updated to ${data.new_status}`, 'success');
+            } else {
+                showNotification('Error: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error updating order status', 'danger');
+        });
+    }
+    
+    // View order details
+    function viewOrderDetails(orderId) {
+        fetch(`/track-order/${orderId}/`)
+            .then(response => response.text())
+            .then(html => {
+                const modalContent = document.querySelector('#orderDetailsModal .modal-content');
+                modalContent.innerHTML = html;
+                const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error loading order details', 'danger');
+            });
+    }
+    
+    // Cancel order
+    function cancelOrder(orderId) {
+        if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+            updateOrderStatus(orderId, 'cancelled');
+        }
+    }
+    
+    // Send notification to customer
+    function sendNotification(orderId) {
+        const message = prompt('Enter notification message for the customer:');
+        if (message) {
+            // Implement notification sending logic here
+            showNotification('Notification sent to customer', 'success');
+        }
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

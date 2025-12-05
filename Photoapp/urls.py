@@ -19,30 +19,45 @@ from django.urls import path
 from Photoapp import views
 
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
+    
+    # Authentication
     path('', views.index, name='home'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('register/', views.register, name='register'),
+    
+    # Main Pages
     path('client/', views.client, name='client'),
     path('admin-page/', views.admin, name='admin'),
-    path('logout/', views.logout_view, name='logout'),
-   
-    path('register/', views.register, name='register'),
-    path('cart/', views.cart, name='cart'),
-    path('order-history/', views.orderHistory, name='orderHistory'),
-    path('track-order/', views.trackOrder, name='trackOrder'),
-    path('client-manage/', views.clientManage, name='clientManage'),
-    path('upload-photos/', views.upload_photos, name='upload_photos'),
-    path('client-gallery/', views.client_gallery, name='client_gallery'),
+    path('trackOrder',views.trackOrder, name='trackOrder'),
     path('pic/', views.pic, name='pic'),
-    path('client-page/', views.client_page, name='client_page'),
-    path('purchase-photo/<int:photo_id>/', views.purchase_photo, name='purchase_photo'),
+      
+    # Cart & Purchases
+    path('cart/', views.cart, name='cart'),
     path('add-to-cart/', views.add_to_cart, name='add_to_cart'),
-    path('remove-from-cart/<int:cart_item_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('remove-from-cart/', views.remove_from_cart, name='remove_from_cart'),
     path('update-cart-quantity/', views.update_cart_quantity, name='update_cart_quantity'),
     path('checkout/', views.checkout, name='checkout'),
     path('clear-cart/', views.clear_cart, name='clear_cart'),
-  
+    path('quick-buy/<int:photo_id>/', views.quick_buy, name='quick_buy'),
+    path('purchase-photo/<int:photo_id>/', views.purchase_photo, name='purchase_photo'),
     
+    # Print Orders
+    path('create-print-order/', views.create_print_order, name='create_print_order'),
     
+    # Order Tracking (FIXED: using the correct view names)
+    path('track-orders/', views.track_order_view, name='track_orders'),
+    path('track-order/<int:order_id>/', views.track_order_view, name='track_order_detail'),
+    path('order-history/', views.orderHistory, name='order_history'),
     
-    path('login/', views.login_view, name='login'),
+    # Admin/Photographer Pages
+    path('upload-photos/', views.upload_photos, name='upload_photos'),
+    path('admin_orders/', views.admin_orders, name='admin_orders'),
+    path('admin/orders/<int:order_id>/update-status/', views.update_order_status, name='update_order_status'),
+    
+    # Other Pages (keeping old names for compatibility)
+ 
+    path('client-manage/', views.clientManage, name='clientManage'),
 ]

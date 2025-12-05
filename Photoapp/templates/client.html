@@ -30,7 +30,7 @@
                 <i class="fas fa-shipping-fast"></i>
                 <span>Track Order</span>
             </a>
-            <a href="{% url 'orderHistory' %}" class="sidebar-link">
+            <a href="{% url 'order_history' %}" class="sidebar-link">
                 <i class="fas fa-history"></i>
                 <span>Order History</span>
             </a>
@@ -155,6 +155,7 @@
                             <button class="btn btn-pv-primary btn-sm" onclick="quickBuy(this, '{{ photo.id }}')">
                                 <i class="fas fa-bolt me-1"></i> Buy Now
                             </button>
+                            
                         </div>
                     </div>
                 </div>
@@ -189,7 +190,7 @@
             <span class="badge bg-success ms-2">{{ purchased_count }} photos</span>
         </h3>
 
-        <button class="btn-pv-primary btn-sm" onclick="openOrderModal()">
+        <button class="btn-pv-primary btn-sm" onclick="openOrderModal(getSelectedPhotoIds())">
             <i class="fas fa-print me-1"></i>
             Order Prints
         </button>
@@ -244,7 +245,7 @@
                                 Download
                             </a>
 
-                            <button class="btn btn-pv-outline btn-sm">
+                            <button class="btn btn-pv-outline btn-sm" onclick="openOrderModal(this ,'{{ photo.id }}')">
                                 <i class="fas fa-print me-1"></i>
                                 Print
                             </button>
@@ -401,6 +402,144 @@
 </style>
 
 <script>
+    // Get selected photo IDs from checkboxes
+function getSelectedPhotoIds() {
+    const selectedCheckboxes = document.querySelectorAll('.photo-checkbox:checked');
+    const photoIds = Array.from(selectedCheckboxes)
+        .map(checkbox => checkbox.value)
+        .filter(id => id);
+    return photoIds;
+}
+
+// Open order modal with selected photos
+function openOrderModal(photoIds = null) {
+    if (!photoIds || photoIds.length === 0) {
+        photoIds = getSelectedPhotoIds();
+    }
+    
+    if (photoIds.length === 0) {
+        showNotification('Please select at least one photo to print', 'warning');
+        return;
+    }
+    
+    // Store photo IDs in a global variable
+    window.selectedPhotosForPrint = photoIds;
+    
+    // Open the modal
+    const modalElement = document.getElementById('orderModal');
+    if (modalElement) {
+        // Set the selected photos in the hidden input
+        const photosInput = modalElement.querySelector('#selected_photos');
+        if (photosInput) {
+            photosInput.value = photoIds.join(',');
+        }
+        
+        // Update the selected count display
+        const selectedCount = modalElement.querySelector('#selectedCount');
+        if (selectedCount) {
+            selectedCount.textContent = photoIds.length + ' photos selected';
+        }
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } else {
+        console.error('Order modal not found');
+        showNotification('Error opening order modal', 'danger');
+    }
+}
+
+// Handle print order form submission
+function submitPrintOrder(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    // Get selected photos from the input
+    const selectedPhotos = form.querySelector('#selected_photos').value;
+    if (!selectedPhotos) {
+        showNotification('No photos selected for printing', 'warning');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = form.querySelector('#submitBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+    submitBtn.disabled = true;
+    
+    // Submit the form
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Print order #${data.order_number} created successfully!`, 'success');
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('orderModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Redirect to track order page
+            if (data.redirect_url) {
+                setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                }, 1500);
+            }
+        } else {
+            showNotification('Error: ' + data.error, 'danger');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error creating print order', 'danger');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// Filter photos
+function filterPhotos(filter) {
+    const filterButtons = document.querySelectorAll('.btn-group .btn');
+    filterButtons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (filter === 'all') {
+        document.querySelectorAll('.photo-card').forEach(card => {
+            card.style.display = 'block';
+        });
+    } else if (filter === 'preview') {
+        document.querySelectorAll('.photo-card').forEach(card => {
+            card.style.display = card.dataset.type === 'preview' ? 'block' : 'none';
+        });
+    } else if (filter === 'purchased') {
+        document.querySelectorAll('.photo-card').forEach(card => {
+            card.style.display = card.classList.contains('purchased') ? 'block' : 'none';
+        });
+    }
+}
+
+// Select all preview photos
+function selectAllPreview() {
+    const checkboxes = document.querySelectorAll('#preview-photos .photo-checkbox');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = !allChecked;
+    });
+    
+    updateCounts();
+}
     function showCartPreview() {
     const preview = document.getElementById('cartPreview');
 

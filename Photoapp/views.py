@@ -9,8 +9,9 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth.models import User
-from .models import Photo, Profile, Cart, Purchase
+from .models import Photo, Profile, Cart, Purchase,PrintOrder, PrintOrderItem, OrderStatusUpdate,PrintPrice
 from decimal import Decimal
+from django.db import transaction, models
 from django.http import JsonResponse
 import json
 
@@ -152,13 +153,7 @@ def upload_photos(request):
     return render(request, "admin.html")
 
 
-@login_required
-def client_gallery(request):
- 
 
-    return render(request, "client.html", {
-    })
-    
 @login_required
 def purchase_photo(request, photo_id):
     photo = Photo.objects.get(id=photo_id, client=request.user)
@@ -190,9 +185,6 @@ def client(request):
 
     return render(request, 'client.html', context)
 
-@login_required
-def client_page(request):
-    return render(request, "client.html")
 
 
 def pic(request):
@@ -207,8 +199,35 @@ def index(request):
 
 
 def admin(request):
+    status_filter = request.GET.get('status', '')
+
+    # Base query: all orders
+    base_query = PrintOrder.objects.all().order_by('-created_at')
+
+    # Apply status filter if given
+    if status_filter:
+        orders = base_query.filter(status=status_filter)
+    else:
+        orders = base_query
+
+    # Count pending orders
+    pending_count = base_query.filter(status='pending').count()
+
+    # Recent orders (latest 5)
+    recent_orders = orders[:5]  # you can slice here or in template
     users = User.objects.filter(profile__user_type="customer")
-    return render(request, 'admin.html',{'users':users})
+
+    context = {
+        'users':users,
+        "orders": orders,
+        "pending_count": pending_count,
+        "recent_orders": recent_orders,
+        "status_filter": status_filter,
+    }
+    
+    
+    
+    return render(request, 'admin.html',context)
 
 
 #=====cart views=====#
@@ -411,14 +430,280 @@ def clear_cart(request):
     messages.success(request, 'Cart cleared successfully')
     return redirect('cart')
 
+##=====print order views=====##
+@login_required
+@require_POST
+def create_print_order(request):
+    try:
+        data = request.POST
+        
+        # Get selected photo IDs
+        photo_ids = [int(id) for id in data.get('selected_photos', '').split(',') if id]
+        if not photo_ids:
+            return JsonResponse({'success': False, 'error': 'No photos selected'})
+        
+        # Get photos - REMOVE is_purchased filter for print orders
+        # Print orders can be created for already purchased photos
+        photos = Photo.objects.filter(id__in=photo_ids)
+        
+        if not photos.exists():
+            return JsonResponse({'success': False, 'error': 'No valid photos found'})
+        
+        # Calculate prices
+        size = data.get('print_size', '8x10')
+        quantity = int(data.get('quantity', 1))
+        framing = data.get('framing') == 'on'
+        
+        # Get print price - add default if not exists
+        try:
+            print_price = PrintPrice.objects.get(size=size)
+            print_unit_price = print_price.price
+            framing_price = print_price.framing_price if framing else Decimal('0.00')
+        except PrintPrice.DoesNotExist:
+            # Create default print prices if they don't exist
+            print_unit_price = Decimal('500.00')  # Default price
+            framing_price = Decimal('500.00') if framing else Decimal('0.00')
+        
+        # Shipping costs
+        shipping_method = data.get('shipping_method', 'express')
+        shipping_costs = {
+            'standard': Decimal('200.00'),
+            'express': Decimal('500.00'),
+            'overnight': Decimal('1000.00')
+        }
+        shipping_cost = shipping_costs.get(shipping_method, Decimal('500.00'))
+        
+        # Calculate totals
+        subtotal = (print_unit_price + framing_price) * len(photos) * quantity
+        tax = subtotal * Decimal('0.08')  # 8% tax
+        total = subtotal + shipping_cost + tax
+        
+        with transaction.atomic():
+            # Create print order
+            order = PrintOrder.objects.create(
+                user=request.user,
+                print_size=size,
+                paper_type=data.get('paper_type', 'matte'),
+                quantity=quantity,
+                framing=framing,
+                frame_color=data.get('frame_color') if framing else None,
+                shipping_method=shipping_method,
+                shipping_address=data.get('shipping_address'),
+                shipping_city=data.get('shipping_city'),
+                shipping_state=data.get('shipping_state'),
+                shipping_zip=data.get('shipping_zip'),
+                shipping_country='Kenya',
+                contact_email=data.get('contact_email'),
+                contact_phone=data.get('contact_phone'),
+                subtotal=subtotal,
+                shipping_cost=shipping_cost,
+                tax=tax,
+                total_amount=total,
+                status='pending'
+            )
+            
+            # Create order items
+            for photo in photos:
+                PrintOrderItem.objects.create(
+                    order=order,
+                    photo=photo,
+                    quantity=quantity,
+                    unit_price=print_unit_price,
+                    notes=f"Print: {size}, Paper: {data.get('paper_type')}" + 
+                          (f", Framing: {data.get('frame_color')}" if framing else "")
+                )
+            
+            # Create initial status update
+            OrderStatusUpdate.objects.create(
+                order=order,
+                status='pending',
+                notes='Order created successfully',
+                updated_by=request.user
+            )
+            
+            # Remove from cart if present
+            Cart.objects.filter(user=request.user, photo__in=photos).delete()
+        
+        messages.success(request, f'Print order #{order.order_number} created successfully!')
+        return JsonResponse({
+            'success': True,
+            'order_number': order.order_number,
+            'redirect_url': f'/trackOrder/{order.id}/'
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error creating print order: {str(e)}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)})
+@login_required
+def track_order_view(request, order_id=None):
+    if order_id:
+        # Single order view
+        order = get_object_or_404(PrintOrder, id=order_id, user=request.user)
+        status_updates = order.status_updates.all().order_by('-created_at')
+        
+        context = {
+            'order': order,
+            'status_updates': status_updates,
+            'single_view': True,
+        }
+        return render(request, 'trackOrder.html', context)
+    
+    # All active orders view
+    active_orders = PrintOrder.objects.filter(
+        user=request.user
+    ).exclude(
+        status__in=['delivered', 'cancelled']
+    ).order_by('-created_at')
+    
+    recent_orders = PrintOrder.objects.filter(
+        user=request.user
+    ).order_by('-created_at')[:5]
+    
+    # Calculate statistics
+    total_orders = PrintOrder.objects.filter(user=request.user).count()
+    delivered_orders = PrintOrder.objects.filter(user=request.user, status='delivered').count()
+    total_spent = PrintOrder.objects.filter(
+        user=request.user, status='delivered'
+    ).aggregate(total=models.Sum('total_amount'))['total'] or Decimal('0.00')
+    
+    context = {
+        'active_orders': active_orders,
+        'recent_orders': recent_orders,
+        'total_orders': total_orders,
+        'delivered_orders': delivered_orders,
+        'total_spent': total_spent,
+    }
+    return render(request, 'trackOrder.html', context)
+
 
 
 
 def orderHistory(request):
-    return render(request, 'orderHistory.html')
 
-def trackOrder(request):
-    return render(request, 'trackOrder.html')
+    orders = PrintOrder.objects.filter(user=request.user).order_by('-created_at')
+    
+    context = {
+        'orders': orders,
+    }
+    return render(request, 'orderHistory.html',context)
 
+# Admin Views for Photographers
+@login_required
+def admin_orders(request):
+    status_filter = request.GET.get('status', '')
+
+    # Base query: all orders
+    base_query = PrintOrder.objects.all().order_by('-created_at')
+
+    # Apply status filter if given
+    if status_filter:
+        orders = base_query.filter(status=status_filter)
+    else:
+        orders = base_query
+
+    # Count pending orders
+    pending_count = base_query.filter(status='pending').count()
+
+    context = {
+        "orders": orders,
+        "pending_count": pending_count,
+        "status_filter": status_filter,
+    }
+    return render(request, "admin_orders.html", context)
+@login_required
+@require_POST
+def update_order_status(request, order_id):
+    if not request.user.profile.is_photographer:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    try:
+        data = json.loads(request.body)
+        order = get_object_or_404(PrintOrder, id=order_id)
+        
+        # Check if user is the photographer for any photo in the order
+        if not order.photos.filter(photographer=request.user).exists():
+            return JsonResponse({'success': False, 'error': 'Not authorized'})
+        
+        new_status = data.get('status')
+        notes = data.get('notes', '')
+        
+        if new_status not in dict(PrintOrder.STATUS_CHOICES):
+            return JsonResponse({'success': False, 'error': 'Invalid status'})
+        
+        with transaction.atomic():
+            order.status = new_status
+            order.save()
+            
+            OrderStatusUpdate.objects.create(
+                order=order,
+                status=new_status,
+                notes=notes,
+                updated_by=request.user
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'new_status': order.get_status_display(),
+            'status_class': get_status_class(new_status)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def get_status_class(status):
+    status_classes = {
+        'pending': 'warning',
+        'processing': 'info',
+        'printed': 'primary',
+        'shipped': 'success',
+        'delivered': 'success',
+        'cancelled': 'danger',
+    }
+    return status_classes.get(status, 'secondary')
+
+
+@login_required
+def trackOrder(request, order_id=None):
+    if order_id:
+        # Single order view
+        order = get_object_or_404(PrintOrder, id=order_id, user=request.user)
+        status_updates = order.status_updates.all().order_by('-created_at')
+        
+        context = {
+            'order': order,
+            'status_updates': status_updates,
+            'single_view': True,
+        }
+        return render(request, 'trackOrder.html', context)
+    
+    # All active orders
+    active_orders = PrintOrder.objects.filter(
+        user=request.user
+    ).exclude(
+        status__in=['delivered', 'cancelled']
+    ).order_by('-created_at')
+    
+    recent_orders = PrintOrder.objects.filter(
+        user=request.user
+    ).order_by('-created_at')[:5]
+    
+    # Statistics
+    total_orders = PrintOrder.objects.filter(user=request.user).count()
+    delivered_orders = PrintOrder.objects.filter(user=request.user, status='delivered').count()
+    total_spent = PrintOrder.objects.filter(
+        user=request.user, status='delivered'
+    ).aggregate(total=models.Sum('total_amount'))['total'] or Decimal('0.00')
+    
+    context = {
+        'active_orders': active_orders,
+        'recent_orders': recent_orders,
+        'total_orders': total_orders,
+        'delivered_orders': delivered_orders,
+        'total_spent': total_spent,
+    }
+    return render(request, 'trackOrder.html', context)
 def clientManage(request):
     return render(request, 'clientManage.html')
