@@ -19,6 +19,40 @@ from datetime import timedelta
 
 import json
 
+import requests
+
+from django.views.decorators.csrf import csrf_exempt
+
+from django.conf import settings
+
+OPENROUTER_API_KEY="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"
+def chatbot_page(request):
+    return render(request, "chat.html")
+
+# Handles the API POST requests
+@csrf_exempt
+def chatbot_api(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        user_message = data.get("message", "")
+
+        # Call OpenRouter GPT
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-4.1-mini",
+                "messages": [{"role": "user", "content": user_message}]
+            }
+        )
+        reply = response.json()["choices"][0]["message"]["content"]
+        return JsonResponse({"reply": reply})
+    
+    return JsonResponse({"reply": "Send a POST request with a message."})
+
 # Create your views here.
 def base(request):
     return render(request, 'base.html')

@@ -16,7 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.views.generic import TemplateView
 from Photoapp import views
+
 
 urlpatterns = [
     # Admin
@@ -60,4 +62,8 @@ urlpatterns = [
     # Other Pages (keeping old names for compatibility)
  
     path('client-manage/', views.clientManage, name='clientManage'),
+
+    path("chat/", views.chatbot_page, name="chatbot_page"),  # UI page
+    path("api/chatbot/", views.chatbot_api, name="chatbot_api"), # POST API
 ]
+
