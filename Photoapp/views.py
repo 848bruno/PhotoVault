@@ -13,6 +13,10 @@ from .models import Photo, Profile, Cart, Purchase,PrintOrder, PrintOrderItem, O
 from decimal import Decimal
 from django.db import transaction, models
 from django.http import JsonResponse
+from django.db.models import Count, Sum,Avg
+from django.utils import timezone
+from datetime import timedelta
+
 import json
 
 # Create your views here.
@@ -705,5 +709,126 @@ def trackOrder(request, order_id=None):
         'total_spent': total_spent,
     }
     return render(request, 'trackOrder.html', context)
+
+
+
+@login_required
 def clientManage(request):
-    return render(request, 'clientManage.html')
+    # Only photographers should access this
+    if not request.user.profile.is_photographer:
+        messages.error(request, 'Access denied. Photographer account required.')
+        return redirect('home')
+    
+    # Get all customers
+    customers = User.objects.filter(
+        profile__user_type='customer'
+    ).select_related('profile').prefetch_related(
+        'uploaded_photos', 'purchases', 'print_orders'
+    )
+    
+    # Add statistics to each customer
+    customer_list = []
+    total_revenue = Decimal('0.00')
+    
+    for customer in customers:
+        # Get photo counts
+        total_photos = customer.uploaded_photos.count()
+        purchased_photos = customer.purchases.filter(status='completed').count()
+        
+        # Get order statistics
+        print_orders = customer.print_orders.all()
+        total_orders = print_orders.count()
+        total_spent = print_orders.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+        total_revenue += total_spent
+        
+        # Calculate average order value
+        avg_order_value = Decimal('0.00')
+        if total_orders > 0:
+            avg_order_value = total_spent / Decimal(str(total_orders))
+        
+        # Determine activity status
+        last_login = customer.last_login
+        last_order = print_orders.order_by('-created_at').first()
+        last_activity = max(
+            last_login or customer.date_joined,
+            last_order.created_at if last_order else customer.date_joined
+        )
+        
+        # Determine if new (registered within last 30 days)
+        is_new = (timezone.now() - customer.date_joined) < timedelta(days=30)
+        
+        # Determine if active (activity within last 30 days)
+        is_active = False
+        if last_activity:
+            is_active = (timezone.now() - last_activity) < timedelta(days=30)
+        
+        # Determine tier based on total spent
+        if total_spent > Decimal('5000.00'):
+            tier = 'premium'
+            tier_class = 'pv-light'
+        elif total_spent > Decimal('1000.00'):
+            tier = 'standard'
+            tier_class = 'info'
+        else:
+            tier = 'basic'
+            tier_class = 'secondary'
+        
+        # Determine status badge
+        if is_new:
+            status_text = 'New'
+            status_class = 'info'
+        elif is_active:
+            status_text = 'Active'
+            status_class = 'success'
+        else:
+            status_text = 'Inactive'
+            status_class = 'warning'
+        
+        # Create customer data dict
+        customer_data = {
+            'user': customer,
+            'profile': customer.profile,
+            'total_photos': total_photos,
+            'purchased_photos': purchased_photos,
+            'total_orders': total_orders,
+            'total_spent': total_spent,
+            'avg_order_value': avg_order_value,
+            'last_order_date': last_order.created_at if last_order else None,
+            'last_activity': last_activity,
+            'is_active': is_active,
+            'is_new': is_new,
+            'tier': tier,
+            'tier_class': tier_class,
+            'status_text': status_text,
+            'status_class': status_class,
+            'client_id': f"CL-{customer.id:04d}",
+        }
+        
+        customer_list.append(customer_data)
+    
+    # Sort by total spent (descending)
+    customer_list.sort(key=lambda x: x['total_spent'], reverse=True)
+    
+    # Calculate statistics for the stats cards
+    total_clients = len(customer_list)
+    active_clients = len([c for c in customer_list if c['is_active']])
+    premium_clients = len([c for c in customer_list if c['tier'] == 'premium'])
+    repeat_rate = 0
+    
+    if total_clients > 0:
+        clients_with_multiple_orders = len([c for c in customer_list if c['total_orders'] > 1])
+        repeat_rate = round((clients_with_multiple_orders / total_clients) * 100)
+    
+    standard_clients = total_clients - premium_clients
+    
+    context = {
+        'customers': customer_list,
+        'customer_count': total_clients,
+        'total_revenue': total_revenue,
+        'total_clients': total_clients,
+        'active_clients': active_clients,
+        'premium_clients': premium_clients,
+        'standard_clients': standard_clients,  # Add this line
+        'repeat_rate': repeat_rate,
+    }
+    return render(request, 'clientManage.html', context)

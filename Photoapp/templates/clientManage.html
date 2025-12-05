@@ -60,7 +60,7 @@
             <a href="{% url 'clientManage' %}" class="sidebar-link active">
                 <i class="fas fa-users"></i>
                 <span>Client Management</span>
-                <span class="badge bg-pv-light rounded-pill ms-auto" id="total-clients-count">58</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="total-clients-count">{{ total_clients }}</span>
             </a>
             <a href="#" class="sidebar-link" onclick="openAddClientModal()">
                 <i class="fas fa-user-plus"></i>
@@ -70,7 +70,7 @@
         
         <div class="sidebar-section">
             <h6 class="sidebar-section-title">Content</h6>
-            <a href="#" class="sidebar-link" onclick="openUploadModal()">
+            <a href="{% url 'upload_photos' %}" class="sidebar-link">
                 <i class="fas fa-upload"></i>
                 <span>Upload Photos</span>
             </a>
@@ -120,11 +120,11 @@
                     <div class="client-stat-icon mb-3">
                         <i class="fas fa-users fa-2x text-pv-light"></i>
                     </div>
-                    <h3 class="client-stat-number">58</h3>
+                    <h3 class="client-stat-number">{{ total_clients }}</h3>
                     <p class="client-stat-label text-muted">Total Clients</p>
                     <div class="client-stat-change text-success">
-                        <i class="fas fa-arrow-up me-1"></i>
-                        12% from last month
+                        <i class="fas fa-chart-line me-1"></i>
+                        {{ customer_count }} in system
                     </div>
                 </div>
             </div>
@@ -136,11 +136,11 @@
                     <div class="client-stat-icon mb-3">
                         <i class="fas fa-star fa-2x text-warning"></i>
                     </div>
-                    <h3 class="client-stat-number">24</h3>
+                    <h3 class="client-stat-number">{{ active_clients }}</h3>
                     <p class="client-stat-label text-muted">Active This Month</p>
                     <div class="client-stat-change text-success">
-                        <i class="fas fa-arrow-up me-1"></i>
-                        8% from last month
+                        <i class="fas fa-chart-line me-1"></i>
+                        {% if active_clients > 0 %}Active{% else %}No activity{% endif %}
                     </div>
                 </div>
             </div>
@@ -152,11 +152,11 @@
                     <div class="client-stat-icon mb-3">
                         <i class="fas fa-shopping-bag fa-2x text-info"></i>
                     </div>
-                    <h3 class="client-stat-number">$4,256</h3>
+                    <h3 class="client-stat-number">KSH {{ total_revenue|floatformat:2 }}</h3>
                     <p class="client-stat-label text-muted">Total Revenue</p>
                     <div class="client-stat-change text-success">
-                        <i class="fas fa-arrow-up me-1"></i>
-                        15% from last month
+                        <i class="fas fa-chart-line me-1"></i>
+                        All time revenue
                     </div>
                 </div>
             </div>
@@ -168,11 +168,11 @@
                     <div class="client-stat-icon mb-3">
                         <i class="fas fa-redo fa-2x text-success"></i>
                     </div>
-                    <h3 class="client-stat-number">42%</h3>
+                    <h3 class="client-stat-number">{{ repeat_rate }}%</h3>
                     <p class="client-stat-label text-muted">Repeat Purchase Rate</p>
-                    <div class="client-stat-change text-success">
-                        <i class="fas fa-arrow-up me-1"></i>
-                        7% from last month
+                    <div class="client-stat-change {% if repeat_rate > 30 %}text-success{% else %}text-warning{% endif %}">
+                        <i class="fas fa-chart-line me-1"></i>
+                        {% if repeat_rate > 50 %}Excellent{% elif repeat_rate > 30 %}Good{% else %}Needs improvement{% endif %}
                     </div>
                 </div>
             </div>
@@ -182,7 +182,7 @@
     <!-- Clients Table -->
     <div class="card mb-4">
         <div class="card-header bg-pv-very-light d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">All Clients</h5>
+            <h5 class="mb-0">All Clients ({{ customer_count }})</h5>
             <div class="d-flex gap-2">
                 <div class="dropdown">
                     <button class="btn btn-pv-outline btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -223,332 +223,106 @@
                         </tr>
                     </thead>
                     <tbody id="clients-table">
-                        <!-- Client 1 -->
-                        <tr class="client-row" data-status="active" data-tier="premium">
+                        {% for customer in customers %}
+                        <tr class="client-row" 
+                            data-status="{% if customer.is_active %}active{% else %}inactive{% endif %}" 
+                            data-tier="{{ customer.tier }}"
+                            data-new="{% if customer.is_new %}true{% else %}false{% endif %}"
+                            data-client-id="{{ customer.user.id }}">
                             <td class="ps-4">
-                                <input type="checkbox" class="form-check-input client-checkbox" value="1">
+                                <input type="checkbox" class="form-check-input client-checkbox" value="{{ customer.user.id }}">
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="client-avatar me-3">
-                                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
-                                             alt="Sarah Johnson" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                        <div class="avatar-placeholder bg-pv-light text-white">
+                                            {{ customer.user.first_name|first|upper }}{{ customer.user.last_name|first|upper }}
+                                        </div>
                                     </div>
                                     <div>
-                                        <h6 class="mb-1">Sarah Johnson</h6>
-                                        <small class="text-muted">Client ID: CL-001</small>
+                                        <h6 class="mb-1">{{ customer.user.get_full_name|default:customer.user.username }}</h6>
+                                        <small class="text-muted">Client ID: {{ customer.client_id }}</small>
                                         <div>
-                                            <span class="badge bg-pv-light">Premium</span>
-                                            <span class="badge bg-success">Active</span>
+                                            <span class="badge bg-{{ customer.tier_class }}">
+                                                {{ customer.tier|title }}
+                                            </span>
+                                            <span class="badge bg-{{ customer.status_class }}">
+                                                {{ customer.status_text }}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
                             </td>
                             <td>
                                 <div>
-                                    <div class="fw-medium">sarah.johnson@email.com</div>
-                                    <small class="text-muted">(555) 123-4567</small>
+                                    <div class="fw-medium">{{ customer.user.email }}</div>
+                                    <small class="text-muted">{{ customer.profile.phone|default:"No phone" }}</small>
                                 </div>
                             </td>
                             <td>
-                                <div class="status-indicator active"></div>
-                                <small>Last active: Today</small>
+                                <div class="status-indicator {% if customer.is_active %}active{% elif customer.is_new %}new{% else %}inactive{% endif %}"></div>
+                                <small>
+                                    {% if customer.last_order_date %}
+                                    Last order: {{ customer.last_order_date|date:"M d, Y" }}
+                                    {% elif customer.last_activity %}
+                                    Last active: {{ customer.last_activity|date:"M d, Y" }}
+                                    {% else %}
+                                    Registered: {{ customer.user.date_joined|date:"M d, Y" }}
+                                    {% endif %}
+                                </small>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <i class="fas fa-images me-2 text-pv-light"></i>
                                     <div>
-                                        <div class="fw-medium">24 photos</div>
-                                        <small class="text-muted">12 purchased</small>
+                                        <div class="fw-medium">{{ customer.total_photos }} photos</div>
+                                        <small class="text-muted">{{ customer.purchased_photos }} purchased</small>
                                     </div>
                                 </div>
                             </td>
                             <td>
                                 <div>
-                                    <div class="fw-medium">8 orders</div>
-                                    <small class="text-muted">Last: Jan 15, 2024</small>
+                                    <div class="fw-medium">{{ customer.total_orders }} orders</div>
+                                    {% if customer.last_order_date %}
+                                    <small class="text-muted">Last: {{ customer.last_order_date|date:"M d, Y" }}</small>
+                                    {% else %}
+                                    <small class="text-muted">No orders yet</small>
+                                    {% endif %}
                                 </div>
                             </td>
                             <td>
-                                <div class="fw-bold text-pv-light">$789.50</div>
-                                <small class="text-muted">Avg: $98.69/order</small>
+                                <div class="fw-bold text-pv-light">KSH {{ customer.total_spent|floatformat:2 }}</div>
+                                {% if customer.total_orders > 0 %}
+                                <small class="text-muted">
+                                    Avg: KSH {{ customer.avg_order_value|floatformat:2 }}/order
+                                </small>
+                                {% endif %}
                             </td>
                             <td class="pe-4 text-end">
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewClientDetails(1)">
+                                    <button class="btn btn-outline-secondary" onclick="viewClientDetails({{ customer.user.id }})">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-outline-secondary" onclick="editClient(1)">
+                                    <button class="btn btn-outline-secondary" onclick="editClient({{ customer.user.id }})">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-pv-outline"  onclick="openUploadModal()">
+                                    <button class="btn btn-pv-outline" onclick="assignPhotos({{ customer.user.id }})">
                                         <i class="fas fa-plus"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
-
-                        <!-- Client 2 -->
-                        <tr class="client-row" data-status="active" data-tier="standard">
-                            <td class="ps-4">
-                                <input type="checkbox" class="form-check-input client-checkbox" value="2">
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="client-avatar me-3">
-                                        <div class="avatar-placeholder bg-info text-white">
-                                            MC
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">Michael Chen</h6>
-                                        <small class="text-muted">Client ID: CL-002</small>
-                                        <div>
-                                            <span class="badge bg-secondary">Standard</span>
-                                            <span class="badge bg-success">Active</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">michael.chen@email.com</div>
-                                    <small class="text-muted">(555) 234-5678</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="status-indicator active"></div>
-                                <small>Last active: Yesterday</small>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-images me-2 text-pv-light"></i>
-                                    <div>
-                                        <div class="fw-medium">18 photos</div>
-                                        <small class="text-muted">8 purchased</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">5 orders</div>
-                                    <small class="text-muted">Last: Jan 14, 2024</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-pv-light">$345.20</div>
-                                <small class="text-muted">Avg: $69.04/order</small>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewClientDetails(2)">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="editClient(2)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="assignPhotos(2)">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fas fa-users fa-3x mb-3"></i>
+                                    <h5>No clients found</h5>
+                                    <p class="mb-0">Your customers will appear here.</p>
                                 </div>
                             </td>
                         </tr>
-
-                        <!-- Client 3 -->
-                        <tr class="client-row" data-status="inactive" data-tier="premium">
-                            <td class="ps-4">
-                                <input type="checkbox" class="form-check-input client-checkbox" value="3">
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="client-avatar me-3">
-                                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
-                                             alt="Robert Wilson" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">Robert Wilson</h6>
-                                        <small class="text-muted">Client ID: CL-003</small>
-                                        <div>
-                                            <span class="badge bg-pv-light">Premium</span>
-                                            <span class="badge bg-warning text-dark">Inactive</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">robert.wilson@email.com</div>
-                                    <small class="text-muted">(555) 345-6789</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="status-indicator inactive"></div>
-                                <small>Last active: Dec 28, 2023</small>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-images me-2 text-pv-light"></i>
-                                    <div>
-                                        <div class="fw-medium">32 photos</div>
-                                        <small class="text-muted">15 purchased</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">12 orders</div>
-                                    <small class="text-muted">Last: Dec 28, 2023</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-pv-light">$1,245.80</div>
-                                <small class="text-muted">Avg: $103.82/order</small>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewClientDetails(3)">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="editClient(3)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="sendReminder(3)">
-                                        <i class="fas fa-bell"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Client 4 -->
-                        <tr class="client-row" data-status="active" data-tier="standard">
-                            <td class="ps-4">
-                                <input type="checkbox" class="form-check-input client-checkbox" value="4">
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="client-avatar me-3">
-                                        <div class="avatar-placeholder bg-success text-white">
-                                            ED
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">Emma Davis</h6>
-                                        <small class="text-muted">Client ID: CL-004</small>
-                                        <div>
-                                            <span class="badge bg-secondary">Standard</span>
-                                            <span class="badge bg-success">Active</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">emma.davis@email.com</div>
-                                    <small class="text-muted">(555) 456-7890</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="status-indicator active"></div>
-                                <small>Last active: Jan 13, 2024</small>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-images me-2 text-pv-light"></i>
-                                    <div>
-                                        <div class="fw-medium">15 photos</div>
-                                        <small class="text-muted">6 purchased</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">3 orders</div>
-                                    <small class="text-muted">Last: Jan 13, 2024</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-pv-light">$156.45</div>
-                                <small class="text-muted">Avg: $52.15/order</small>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewClientDetails(4)">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="editClient(4)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="assignPhotos(4)">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Client 5 -->
-                        <tr class="client-row" data-status="new" data-tier="standard">
-                            <td class="ps-4">
-                                <input type="checkbox" class="form-check-input client-checkbox" value="5">
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="client-avatar me-3">
-                                        <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" 
-                                             alt="David Miller" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">David Miller</h6>
-                                        <small class="text-muted">Client ID: CL-005</small>
-                                        <div>
-                                            <span class="badge bg-secondary">Standard</span>
-                                            <span class="badge bg-info">New</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">david.miller@email.com</div>
-                                    <small class="text-muted">(555) 567-8901</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="status-indicator new"></div>
-                                <small>Registered: Jan 12, 2024</small>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-images me-2 text-pv-light"></i>
-                                    <div>
-                                        <div class="fw-medium">8 photos</div>
-                                        <small class="text-muted">2 purchased</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">2 orders</div>
-                                    <small class="text-muted">Last: Jan 12, 2024</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-pv-light">$89.98</div>
-                                <small class="text-muted">Avg: $44.99/order</small>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewClientDetails(5)">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="editClient(5)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="welcomeClient(5)">
-                                        <i class="fas fa-envelope"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -565,36 +339,79 @@
                         Delete Selected
                     </button>
                 </div>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#">Previous</a>
-                        </li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
-                        <li class="page-item">
-                            <a class="page-link" href="#">Next</a>
-                        </li>
-                    </ul>
-                </nav>
+                <div class="text-muted">
+                    <small>Total Revenue: <strong class="text-pv-light">KSH {{ total_revenue|floatformat:2 }}</strong></small>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Client Activity Chart -->
+    <!-- Client Activity & Tier Distribution -->
     <div class="row mb-4 g-4">
         <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header bg-pv-very-light">
                     <h5 class="mb-0">
                         <i class="fas fa-chart-line me-2 text-pv-light"></i>
-                        Client Activity Timeline
+                        Client Activity Overview
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container" style="height: 250px;">
-                        <canvas id="clientActivityChart"></canvas>
+                    <div class="activity-stats">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="activity-stat">
+                                    <div class="activity-number text-pv-light">{{ active_clients }}</div>
+                                    <div class="activity-label">Active Clients</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="activity-stat">
+                                    <div class="activity-number text-info">{{ total_clients|add:"-active_clients" }}</div>
+                                    <div class="activity-label">Inactive Clients</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="activity-stat">
+                                    <div class="activity-number text-success">{{ total_clients }}</div>
+                                    <div class="activity-label">Total in System</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <h6>Recent Activity</h6>
+                            <div class="list-group">
+                                {% for customer in customers %}
+                                {% if forloop.counter <= 3 %}
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ customer.user.get_full_name|default:customer.user.username }}</h6>
+                                        <small class="text-muted">
+                                            {% if customer.last_order_date %}
+                                            {{ customer.last_order_date|timesince }} ago
+                                            {% elif customer.last_activity %}
+                                            {{ customer.last_activity|timesince }} ago
+                                            {% else %}
+                                            Never
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">
+                                        {% if customer.total_orders > 0 %}
+                                        {{ customer.total_orders }} orders • KSH {{ customer.total_spent|floatformat:2 }} spent
+                                        {% else %}
+                                        No orders yet
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endif %}
+                                {% empty %}
+                                <div class="list-group-item">
+                                    <p class="mb-0 text-muted">No recent client activity</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -609,20 +426,29 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container" style="height: 200px;">
-                        <canvas id="clientTierChart"></canvas>
-                    </div>
-                    <div class="row mt-3 text-center">
-                        <div class="col-6">
-                            <div class="tier-stat">
-                                <div class="tier-number text-pv-light">18</div>
-                                <div class="tier-label">Premium Clients</div>
+                    <div class="tier-distribution">
+                        <div class="tier-chart">
+                            <div class="tier-chart-bar premium" style="width: {% widthratio premium_clients total_clients 100 %}%">
+                                <span class="tier-label">Premium</span>
+                                <span class="tier-percentage">{{ premium_clients }}</span>
+                            </div>
+                            <div class="tier-chart-bar standard" style="width: {% widthratio standard_clients total_clients 100 %}%">
+                                <span class="tier-label">Standard</span>
+                                <span class="tier-percentage">{{ standard_clients }}</span>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="tier-stat">
-                                <div class="tier-number text-secondary">40</div>
-                                <div class="tier-label">Standard Clients</div>
+                        <div class="row mt-3 text-center">
+                            <div class="col-6">
+                                <div class="tier-stat">
+                                    <div class="tier-number text-pv-light">{{ premium_clients }}</div>
+                                    <div class="tier-label">Premium Clients</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="tier-stat">
+                                    <div class="tier-number text-secondary">{{ standard_clients }}</div>
+                                    <div class="tier-label">Standard Clients</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -674,14 +500,78 @@
     </div>
 </div>
 
+<!-- Add Client Modal -->
+<div class="modal fade" id="addClientModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addClientForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name *</label>
+                            <input type="text" class="form-control" name="first_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name *</label>
+                            <input type="text" class="form-control" name="last_name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Username *</label>
+                            <input type="text" class="form-control" name="username" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Initial Password *</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Client Tier</label>
+                        <select class="form-select" name="tier" required>
+                            <option value="basic">Basic</option>
+                            <option value="standard">Standard</option>
+                            <option value="premium">Premium</option>
+                        </select>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="send_welcome" id="sendWelcomeEmail" checked>
+                        <label class="form-check-label" for="sendWelcomeEmail">
+                            Send welcome email with login credentials
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn-pv-primary" onclick="submitAddClient()">Add Client</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     /* Clients Management specific styles */
     .clients-header {
-        border-bottom: 2px solid var(--pv-light-green);
+        border-bottom: 2px solid var(--pv-light);
     }
 
     .client-stat-icon {
-        color: var(--pv-light-green);
+        color: var(--pv-light);
     }
 
     .client-stat-number {
@@ -724,6 +614,8 @@
         justify-content: center;
         font-weight: bold;
         font-size: 0.9rem;
+        background-color: var(--pv-light);
+        color: white;
     }
 
     .status-indicator {
@@ -735,7 +627,8 @@
     }
 
     .status-indicator.active {
-        background-color: var(--pv-light-green);
+        background-color: var(--pv-light);
+        box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
     }
 
     .status-indicator.inactive {
@@ -744,15 +637,89 @@
 
     .status-indicator.new {
         background-color: #17a2b8;
+        box-shadow: 0 0 5px rgba(23, 162, 184, 0.5);
     }
 
     .client-row:hover {
-        background-color: var(--pv-very-light-green);
+        background-color: rgba(76, 175, 80, 0.05);
         cursor: pointer;
     }
 
-    .chart-container {
-        position: relative;
+    /* Badge color classes */
+    .bg-pv-light {
+        background-color: var(--pv-light) !important;
+        color: white !important;
+    }
+
+    .bg-info {
+        background-color: #17a2b8 !important;
+        color: white !important;
+    }
+
+    .bg-success {
+        background-color: #28a745 !important;
+        color: white !important;
+    }
+
+    .bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+
+    .bg-secondary {
+        background-color: #6c757d !important;
+        color: white !important;
+    }
+
+    /* Activity stats */
+    .activity-stat {
+        padding: 15px;
+    }
+
+    .activity-number {
+        font-size: 2rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+
+    .activity-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+
+    /* Tier distribution chart */
+    .tier-chart {
+        height: 40px;
+        background: #e9ecef;
+        border-radius: 20px;
+        overflow: hidden;
+        display: flex;
+        margin: 20px 0;
+    }
+
+    .tier-chart-bar {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
+        color: white;
+        font-weight: bold;
+        transition: width 0.5s ease;
+    }
+
+    .tier-chart-bar.premium {
+        background-color: var(--pv-light);
+    }
+
+    .tier-chart-bar.standard {
+        background-color: #6c757d;
+    }
+
+    .tier-percentage {
+        font-size: 0.9rem;
+        opacity: 0.9;
     }
 
     .tier-stat {
@@ -767,31 +734,30 @@
 
     .tier-label {
         font-size: 0.85rem;
-        color: var(--text-muted);
+        color: #6c757d;
         margin-top: 5px;
     }
 
-    /* Badge colors */
-    .badge.bg-pv-light {
-        background-color: var(--pv-light-green) !important;
-        color: white !important;
+    /* Notification */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease;
     }
 
-    .badge.bg-secondary {
-        background-color: #6c757d !important;
-    }
-
-    .badge.bg-success {
-        background-color: var(--pv-light-green) !important;
-    }
-
-    .badge.bg-warning {
-        background-color: #ffc107 !important;
-        color: #212529 !important;
-    }
-
-    .badge.bg-info {
-        background-color: #17a2b8 !important;
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
 
     /* Responsive adjustments */
@@ -822,6 +788,10 @@
             width: 35px;
             height: 35px;
         }
+        
+        .activity-number, .tier-number {
+            font-size: 1.5rem;
+        }
     }
 
     @media (max-width: 576px) {
@@ -833,116 +803,41 @@
         .pagination {
             font-size: 0.8rem;
         }
+        
+        .client-stat-number {
+            font-size: 1.5rem;
+        }
     }
 </style>
 
 <script>
-    // Load Chart.js from CDN
-    const chartScript = document.createElement('script');
-    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    chartScript.onload = initializeCharts;
-    document.head.appendChild(chartScript);
-
-    let clientActivityChart, clientTierChart;
-
+    // Initialize event listeners
     document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        const searchInput = document.getElementById('client-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                searchClients(e.target.value);
+            });
+        }
+        
+        // Update client counts
         updateClientCounts();
-        initializeEventListeners();
     });
 
-    function initializeEventListeners() {
-        // Search functionality
-        document.getElementById('client-search').addEventListener('input', function(e) {
-            searchClients(e.target.value);
-        });
-    }
-
-    function initializeCharts() {
-        // Client Activity Chart
-        const activityCtx = document.getElementById('clientActivityChart').getContext('2d');
-        clientActivityChart = new Chart(activityCtx, {
-            type: 'line',
-            data: {
-                labels: ['Jan 8', 'Jan 9', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14'],
-                datasets: [
-                    {
-                        label: 'New Clients',
-                        data: [2, 3, 1, 4, 2, 3, 1],
-                        borderColor: 'rgba(76, 175, 80, 1)',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        borderWidth: 2,
-                        fill: true
-                    },
-                    {
-                        label: 'Active Clients',
-                        data: [42, 45, 43, 47, 46, 49, 48],
-                        borderColor: 'rgba(33, 150, 243, 1)',
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        borderWidth: 2,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 5
-                        }
-                    }
-                }
-            }
-        });
-
-        // Client Tier Chart
-        const tierCtx = document.getElementById('clientTierChart').getContext('2d');
-        clientTierChart = new Chart(tierCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Premium', 'Standard'],
-                datasets: [{
-                    data: [18, 40],
-                    backgroundColor: [
-                        'rgba(76, 175, 80, 0.8)',
-                        'rgba(108, 117, 125, 0.8)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                },
-                cutout: '70%'
-            }
-        });
-    }
-
+    // Update client counts
     function updateClientCounts() {
-        const totalClients = document.querySelectorAll('.client-row').length;
-        const activeClients = document.querySelectorAll('.client-row[data-status="active"]').length;
-        const premiumClients = document.querySelectorAll('.client-row[data-tier="premium"]').length;
+        const totalClients = {{ total_clients }};
+        const activeClients = {{ active_clients }};
         
-        document.getElementById('total-clients-count').textContent = totalClients;
-        
-        // Update stats cards
-        document.querySelectorAll('.client-stat-number')[0].textContent = totalClients;
-        document.querySelectorAll('.client-stat-number')[1].textContent = activeClients;
-        document.querySelectorAll('.client-stat-number')[3].textContent = `${Math.round((premiumClients / totalClients) * 100)}%`;
+        // Update sidebar badge
+        const sidebarBadge = document.getElementById('total-clients-count');
+        if (sidebarBadge) {
+            sidebarBadge.textContent = totalClients;
+        }
     }
 
+    // Search clients
     function searchClients(query = null) {
         if (!query) {
             query = document.getElementById('client-search').value;
@@ -966,37 +861,44 @@
         showNotification(`Found ${count} clients`, 'info');
     }
 
-    function filterClients(filter) {
+    // Filter clients
+    function filterClients(filterType) {
         const rows = document.querySelectorAll('.client-row');
-        let count = 0;
+        let visibleCount = 0;
         
         rows.forEach(row => {
-            let show = true;
+            let shouldShow = false;
             
-            switch(filter) {
+            switch(filterType) {
+                case 'all':
+                    shouldShow = true;
+                    break;
                 case 'active':
-                    show = row.dataset.status === 'active';
+                    shouldShow = row.dataset.status === 'active';
                     break;
                 case 'inactive':
-                    show = row.dataset.status === 'inactive';
+                    shouldShow = row.dataset.status === 'inactive';
                     break;
                 case 'premium':
-                    show = row.dataset.tier === 'premium';
+                    shouldShow = row.dataset.tier === 'premium';
                     break;
                 case 'new':
-                    show = row.dataset.status === 'new';
+                    shouldShow = row.dataset.new === 'true';
                     break;
-                default:
-                    // 'all' - show all
             }
             
-            row.classList.toggle('d-none', !show);
-            if (show) count++;
+            if (shouldShow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
         });
         
-        showNotification(`Showing ${count} ${filter} clients`, 'info');
+        showNotification(`Showing ${visibleCount} clients`, 'info');
     }
 
+    // Toggle select all clients
     function toggleSelectAllClients() {
         const selectAll = document.getElementById('select-all-clients');
         const checkboxes = document.querySelectorAll('.client-checkbox');
@@ -1006,223 +908,181 @@
         });
     }
 
-    function viewClientDetails(clientId) {
-        showNotification(`Loading client ${clientId} details...`, 'info');
-        // In a real app, this would open a modal with full client details
-        openClientDetailsModal(clientId);
-    }
-
-    function editClient(clientId) {
-        showNotification(`Editing client ${clientId}...`, 'info');
-        // In a real app, this would open an edit modal
-        openEditClientModal(clientId);
-    }
-
-    function assignPhotos(clientId) {
-        showNotification(`Assigning photos to client ${clientId}...`, 'info');
-        // In a real app, this would open the photo assignment modal
-        openPhotoAssignmentModal(clientId);
-    }
-
-    function sendReminder(clientId) {
-        if (confirm(`Send reminder email to client ${clientId}?`)) {
-            showNotification(`Sending reminder to client ${clientId}...`, 'info');
-            
-            setTimeout(() => {
-                showNotification(`Reminder sent to client ${clientId}`, 'success');
-            }, 1000);
-        }
-    }
-
-    function welcomeClient(clientId) {
-        if (confirm(`Send welcome email to client ${clientId}?`)) {
-            showNotification(`Sending welcome email to client ${clientId}...`, 'info');
-            
-            setTimeout(() => {
-                showNotification(`Welcome email sent to client ${clientId}`, 'success');
-            }, 1000);
-        }
-    }
-
+    // Bulk assign photos to selected clients
     function bulkAssignPhotos() {
-        const selected = document.querySelectorAll('.client-checkbox:checked');
+        const selectedIds = Array.from(document.querySelectorAll('.client-checkbox:checked'))
+            .map(cb => cb.value);
         
-        if (selected.length === 0) {
-            showNotification('Please select clients to assign photos', 'warning');
+        if (selectedIds.length === 0) {
+            showNotification('Please select at least one client', 'warning');
             return;
         }
         
-        const clientIds = Array.from(selected).map(cb => cb.value);
-        showNotification(`Assigning photos to ${clientIds.length} selected clients...`, 'info');
-        
-        // In a real app, this would open bulk assignment modal
-        openBulkAssignmentModal(clientIds);
+        // Redirect to upload photos page with selected clients
+        window.location.href = `{% url 'upload_photos' %}?clients=${selectedIds.join(',')}`;
     }
 
+    // Delete selected clients
     function deleteSelectedClients() {
-        const selected = document.querySelectorAll('.client-checkbox:checked');
+        const selectedIds = Array.from(document.querySelectorAll('.client-checkbox:checked'))
+            .map(cb => cb.value);
         
-        if (selected.length === 0) {
-            showNotification('Please select clients to delete', 'warning');
+        if (selectedIds.length === 0) {
+            showNotification('Please select at least one client', 'warning');
             return;
         }
         
-        if (confirm(`Delete ${selected.length} selected clients? This action cannot be undone.`)) {
-            showNotification(`Deleting ${selected.length} clients...`, 'info');
-            
-            // Simulate deletion
-            setTimeout(() => {
-                selected.forEach(checkbox => {
-                    const row = checkbox.closest('tr');
-                    row.style.opacity = '0.5';
-                    setTimeout(() => row.remove(), 300);
-                });
-                
-                showNotification(`${selected.length} clients deleted successfully`, 'success');
-                updateClientCounts();
-            }, 1000);
+        if (confirm(`Are you sure you want to delete ${selectedIds.length} selected client(s)?`)) {
+            // AJAX request to delete clients
+            fetch('/admin/clients/delete/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ client_ids: selectedIds })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`${data.deleted_count} client(s) deleted successfully`, 'success');
+                    // Remove deleted rows from table
+                    selectedIds.forEach(id => {
+                        const row = document.querySelector(`tr[data-client-id="${id}"]`);
+                        if (row) row.remove();
+                    });
+                    updateClientCounts();
+                } else {
+                    showNotification('Error: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error deleting clients', 'danger');
+            });
         }
     }
 
+    // View client details
+    function viewClientDetails(clientId) {
+        window.location.href = `/admin/client/${clientId}/`;
+    }
+
+    // Edit client
+    function editClient(clientId) {
+        window.location.href = `/admin/client/${clientId}/edit/`;
+    }
+
+    // Assign photos to client
+    function assignPhotos(clientId) {
+        window.location.href = `{% url 'upload_photos' %}?client_id=${clientId}`;
+    }
+
+    // Export clients data
     function exportClients() {
-        showNotification('Exporting client list...', 'info');
+        showNotification('Export feature coming soon!', 'info');
+    }
+
+    // Open add client modal
+    function openAddClientModal() {
+        const modal = new bootstrap.Modal(document.getElementById('addClientModal'));
+        modal.show();
+    }
+
+    // Submit add client form
+    function submitAddClient() {
+        const form = document.getElementById('addClientForm');
+        const formData = new FormData(form);
         
+        // Basic validation
+        if (!formData.get('first_name') || !formData.get('last_name') || 
+            !formData.get('email') || !formData.get('username') || !formData.get('password')) {
+            showNotification('Please fill all required fields', 'warning');
+            return;
+        }
+        
+        showNotification('Adding new client...', 'info');
+        
+        // Simulate API call
         setTimeout(() => {
-            showNotification('Client list exported successfully (clients.csv)', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addClientModal'));
+            modal.hide();
+            showNotification('New client added successfully', 'success');
+            // In a real app, you would reload the page or update the table via AJAX
+            setTimeout(() => location.reload(), 1000);
         }, 1500);
     }
 
+    // Quick action functions
     function sendBulkEmail() {
         showNotification('Opening bulk email composer...', 'info');
-        // In a real app, this would open email composer
-        openBulkEmailComposer();
     }
 
     function createClientSegment() {
         showNotification('Creating client segment...', 'info');
-        // In a real app, this would open segment creation modal
-        openSegmentCreationModal();
     }
 
     function generateClientReport() {
         showNotification('Generating client analytics report...', 'info');
-        
-        setTimeout(() => {
-            showNotification('Client report generated (client_analytics.pdf)', 'success');
-        }, 2000);
     }
 
     function manageSubscriptions() {
         showNotification('Opening subscription management...', 'info');
-        // In a real app, this would open subscription management
-        openSubscriptionManagement();
     }
 
-    function openAddClientModal() {
-        // Create add client modal
-        const modalHTML = `
-            <div class="modal fade" id="addClientModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Add New Client</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="addClientForm">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">First Name</label>
-                                        <input type="text" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Last Name</label>
-                                        <input type="text" class="form-control" required>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Email Address</label>
-                                        <input type="email" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Phone Number</label>
-                                        <input type="tel" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Client Tier</label>
-                                    <select class="form-select" required>
-                                        <option value="standard">Standard</option>
-                                        <option value="premium">Premium</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Initial Photo Assignment</label>
-                                    <select class="form-select" multiple>
-                                        <option>Wedding Photos</option>
-                                        <option>Portrait Session</option>
-                                        <option>Event Coverage</option>
-                                        <option>Product Photos</option>
-                                    </select>
-                                    <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
-                                </div>
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="sendWelcomeEmail">
-                                    <label class="form-check-label" for="sendWelcomeEmail">
-                                        Send welcome email with login credentials
-                                    </label>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn-pv-primary" onclick="submitAddClient()">Add Client</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('addClientModal');
-        if (existingModal) existingModal.remove();
-        
-        // Add modal to body
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        
-        // Show modal
-        new bootstrap.Modal(document.getElementById('addClientModal')).show();
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 
-    function submitAddClient() {
-        showNotification('Adding new client...', 'info');
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // Remove existing notifications
+        document.querySelectorAll('.notification').forEach(n => n.remove());
         
-        setTimeout(() => {
-            bootstrap.Modal.getInstance(document.getElementById('addClientModal')).hide();
-            showNotification('New client added successfully', 'success');
-            // In a real app, this would refresh the client list
-        }, 1000);
-    }
-
-    function showNotification(message, type) {
+        // Create notification element
         const notification = document.createElement('div');
-        notification.className = `alert alert-${type} notification position-fixed`;
-        notification.style.top = '100px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
+        notification.className = `alert alert-${type} alert-dismissible fade show notification`;
         notification.innerHTML = `
             <div class="d-flex align-items-center">
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 
+                                type === 'warning' ? 'fa-exclamation-triangle' : 
+                                type === 'danger' ? 'fa-times-circle' : 'fa-info-circle'} me-2"></i>
                 <span>${message}</span>
             </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
         document.body.appendChild(notification);
         
+        // Auto remove after 5 seconds
         setTimeout(() => {
-            notification.remove();
-        }, 3000);
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+
+    // Logout function
+    function logout() {
+        window.location.href = "{% url 'logout' %}";
+    }
+
+    // Toggle sidebar for mobile
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.toggle('show');
     }
 </script>
 {% endblock %}
