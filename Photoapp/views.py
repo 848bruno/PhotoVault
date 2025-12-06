@@ -30,28 +30,373 @@ def chatbot_page(request):
     return render(request, "chat.html")
 
 # Handles the API POST requests
-@csrf_exempt
-def chatbot_api(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        user_message = data.get("message", "")
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Sum, Q
+from .models import Photo, Purchase, PrintOrder, PrintOrderItem, Profile, Cart
+from datetime import datetime, timedelta
+from django.utils import timezone
+import json
+import requests
+from django.conf import settings
+import logging
+from django.core.cache import cache
 
-        # Call OpenRouter GPT
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "gpt-4.1-mini",
-                "messages": [{"role": "user", "content": user_message}]
-            }
-        )
-        reply = response.json()["choices"][0]["message"]["content"]
-        return JsonResponse({"reply": reply})
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+@login_required
+def chatbot_api(request):
+    """Comprehensive AI chatbot with full project and user context"""
     
-    return JsonResponse({"reply": "Send a POST request with a message."})
+    if request.method == "POST":
+        try:
+            # Parse request data
+            data = json.loads(request.body)
+            user_message = data.get("message", "").strip()
+            
+            if not user_message:
+                return JsonResponse({"reply": "Please provide a message."})
+            
+            # Get or create conversation history
+            conversation_key = f"chat_history_{request.user.id}"
+            conversation_history = cache.get(conversation_key, [])
+            
+            # Add user message to history
+            conversation_history.append({
+                "role": "user",
+                "content": user_message,
+                "timestamp": timezone.now().isoformat()
+            })
+            
+            # Build comprehensive context
+            system_prompt = build_system_prompt(request.user)
+            
+            # Prepare messages for API
+            messages = [
+                {"role": "system", "content": system_prompt}
+            ]
+            
+            # Add recent conversation history (last 5 exchanges)
+            for msg in conversation_history[-10:]:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+            
+            # Call OpenRouter API
+            try:
+                response = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": request.build_absolute_uri('/'),
+                        "X-Title": "PhotoVault AI Assistant"
+                    },
+                    json={
+                        "model": "gpt-4.1-mini",  # Can use "mistralai/mistral-7b-instruct:free" for free
+                        "messages": messages,
+                        "temperature": 0.7,
+                        "max_tokens": 600,
+                    },
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_reply = result["choices"][0]["message"]["content"]
+                    
+                    # Add AI response to history
+                    conversation_history.append({
+                        "role": "assistant",
+                        "content": ai_reply,
+                        "timestamp": timezone.now().isoformat()
+                    })
+                    
+                    # Keep only last 20 messages to avoid cache bloat
+                    if len(conversation_history) > 20:
+                        conversation_history = conversation_history[-20:]
+                    
+                    # Save updated conversation
+                    cache.set(conversation_key, conversation_history, 86400)  # 24 hours
+                    
+                    return JsonResponse({"reply": ai_reply})
+                else:
+                    logger.error(f"OpenRouter error {response.status_code}: {response.text}")
+                    # Fallback to context-aware response
+                    fallback_reply = generate_context_aware_response(request.user, user_message)
+                    return JsonResponse({"reply": fallback_reply})
+                    
+            except requests.exceptions.Timeout:
+                return JsonResponse({"reply": "The AI service is taking too long to respond. Here's what I can tell you based on your account..." + generate_context_aware_response(request.user, user_message)})
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Network error: {str(e)}")
+                return JsonResponse({"reply": "I'm having trouble connecting to the AI service. " + generate_context_aware_response(request.user, user_message)})
+                
+        except json.JSONDecodeError:
+            return JsonResponse({"reply": "Invalid request format. Please send valid JSON."}, status=400)
+        except Exception as e:
+            logger.error(f"Unexpected error in chatbot: {str(e)}")
+            return JsonResponse({"reply": "Sorry, I encountered an unexpected error. Please try again."})
+    
+    return JsonResponse({"reply": "Send a POST request with a 'message' field."})
+
+def build_system_prompt(user):
+    """Build comprehensive system prompt with user and project context"""
+    
+    # Get user-specific data
+    user_data = get_user_data(user)
+    
+    # Get project-wide information
+    project_info = """PHOTOVAULT PLATFORM INFORMATION:
+
+SERVICES OFFERED:
+1. Digital Photo Management
+   - Upload photos (JPG, PNG, HEIC, max 10MB)
+   - Set custom prices for digital downloads
+   - Categorize: Portrait, Landscape, Event, Product, Nature
+   - Mark as purchased when bought
+
+2. Physical Print Orders
+   - Print sizes: 4x6", 5x7", 8x10", 11x14", 16x20", 20x30"
+   - Paper types: Matte, Glossy, Lustre, Metallic
+   - Framing: Optional (+KSH 500)
+   - Shipping: Standard (5-7d, KSH 200), Express (2-3d, KSH 500), Overnight (1d, KSH 1000)
+
+3. Pricing (Kenya Shillings):
+   - Digital photos: Set by photographer
+   - Print prices: 
+     • 4x6: KSH 200
+     • 5x7: KSH 300
+     • 8x10: KSH 500
+     • 11x14: KSH 800
+     • 16x20: KSH 1200
+     • 20x30: KSH 2000
+   - Tax: 8% on all orders
+   - Framing: +KSH 500 per print
+
+4. Order Status Flow:
+   Pending → Processing → Printed → Shipped → Delivered → Cancelled
+
+5. User Types:
+   - Customer: Browse, purchase photos, order prints
+   - Photographer: Upload photos, manage clients, view sales
+
+6. Key Pages & URLs:
+   - Dashboard: /client/ (customers) or /admin/ (photographers)
+   - Shopping Cart: /cart/
+   - Order Tracking: /track-order/
+   - Order History: /order-history/
+   - Client Management: /client-manage/ (photographers only)
+   - Upload Photos: /admin/upload-photos/ (photographers only)
+
+7. Account Management:
+   - Profile settings accessible from dashboard
+   - Password reset via email
+   - Contact: support@photovault.com (9 AM - 6 PM EAT)
+
+8. Common Actions:
+   - Upload photos: Use upload modal on admin dashboard
+   - Purchase photos: Click "Buy Now" or add to cart
+   - Create print order: Select photos → "Order Prints" button
+   - Track order: Visit /track-order/ or click order number
+   - Clear cart: "Clear Cart" button in cart page
+"""
+    
+    # Build final prompt
+    prompt = f"""You are PhotoVault AI Assistant, an intelligent helper for the PhotoVault photo management platform.
+
+CRITICAL CONTEXT - YOU MUST USE THIS INFORMATION:
+{user_data}
+
+PLATFORM KNOWLEDGE - REFERENCE THESE DETAILS:
+{project_info}
+
+YOUR PERSONALITY & RULES:
+1. You are helpful, professional, and concise
+2. ALWAYS reference actual user data when relevant (use exact numbers, names, dates)
+3. When discussing orders, mention specific order numbers if available
+4. For pricing questions, use exact KSH amounts from platform info
+5. Suggest specific page URLs or features when appropriate
+6. Use markdown formatting: **bold** for emphasis, bullet points for lists
+7. If unsure about user-specific data, say "Based on your account..."
+8. If asked about something not in context, suggest contacting support@photovault.com
+9. Never make up data that isn't provided in the context
+
+RESPONSE FORMATTING:
+- Start with a brief acknowledgment if needed
+- Provide clear, actionable information
+- Use bullet points for steps or lists
+- End with a helpful suggestion if appropriate
+
+Now respond to the user's query. Remember to be helpful and reference their actual data when possible."""
+    
+    return prompt
+
+def get_user_data(user):
+    """Extract all relevant user data for context"""
+    
+    try:
+        profile = Profile.objects.get(user=user)
+        
+        # Basic user info
+        user_info = f"""
+USER PROFILE:
+• Username: {user.username}
+• Full Name: {user.get_full_name() or 'Not set'}
+• Email: {user.email}
+• Phone: {profile.phone or 'Not provided'}
+• Account Type: {profile.get_user_type_display()}
+• Member Since: {user.date_joined.strftime('%B %d, %Y')} ({ (timezone.now() - user.date_joined).days } days ago)
+"""
+        
+        # Photos data
+        uploaded_photos = Photo.objects.filter(photographer=user)
+        purchased_photos = Purchase.objects.filter(user=user, status='completed')
+        
+        photos_info = f"""
+PHOTOS:
+• Uploaded: {uploaded_photos.count()} photos
+• Purchased: {purchased_photos.count()} photos
+• In Cart: {Cart.objects.filter(user=user, is_active=True).count()} items
+"""
+        
+        # Add photo categories if any
+        if uploaded_photos.exists():
+            categories = uploaded_photos.values('category').annotate(count=Count('category'))
+            categories_str = ", ".join([f"{cat['category']} ({cat['count']})" for cat in categories])
+            photos_info += f"• Categories: {categories_str}\n"
+        
+        # Orders data
+        print_orders = PrintOrder.objects.filter(user=user).order_by('-created_at')
+        recent_orders = print_orders[:3]  # Last 3 orders
+        
+        orders_info = f"""
+ORDERS:
+• Total Print Orders: {print_orders.count()}
+• Active Orders: {print_orders.exclude(status__in=['delivered', 'cancelled']).count()}
+• Delivered Orders: {print_orders.filter(status='delivered').count()}
+"""
+        
+        # Add recent orders details
+        if recent_orders.exists():
+            orders_info += "\nRECENT ORDERS:\n"
+            for order in recent_orders:
+                items_count = PrintOrderItem.objects.filter(order=order).count()
+                orders_info += f"• #{order.order_number}: {order.get_status_display()} - KSH {order.total_amount:.2f} ({order.created_at.strftime('%b %d')}) - {items_count} items\n"
+        
+        # Financial data
+        digital_spent = purchased_photos.aggregate(total=Sum('amount_paid'))['total'] or 0
+        print_spent = print_orders.exclude(status='cancelled').aggregate(total=Sum('total_amount'))['total'] or 0
+        total_spent = float(digital_spent) + float(print_spent)
+        
+        financial_info = f"""
+FINANCIAL:
+• Digital Purchases: KSH {float(digital_spent):.2f}
+• Print Orders: KSH {float(print_spent):.2f}
+• Total Spent: KSH {total_spent:.2f}
+"""
+        
+        # Cart info
+        cart_items = Cart.objects.filter(user=user, is_active=True).select_related('photo')
+        if cart_items.exists():
+            cart_total = sum(item.photo.price * item.quantity for item in cart_items)
+            cart_info = f"""
+CART:
+• Items in Cart: {cart_items.count()}
+• Cart Total: ~KSH {cart_total:.2f}
+• Contains: {', '.join(set(item.photo.category for item in cart_items))}
+"""
+        else:
+            cart_info = "\nCART: Empty\n"
+        
+        # Combine all info
+        full_context = user_info + photos_info + orders_info + financial_info + cart_info
+        
+        # Add photographer-specific data
+        if profile.user_type == 'photographer':
+            clients = User.objects.filter(profile__user_type='customer')
+            client_photos = Photo.objects.filter(photographer__in=clients)
+            
+            photographer_info = f"""
+PHOTOGRAPHER DATA:
+• Total Clients: {clients.count()}
+• Photos Uploaded for Clients: {client_photos.count()}
+• Revenue from Client Photos: KSH {client_photos.aggregate(total=Sum('price'))['total'] or 0:.2f}
+"""
+            full_context += photographer_info
+        
+        return full_context
+        
+    except Profile.DoesNotExist:
+        return "User profile not found. Please complete your profile setup."
+    except Exception as e:
+        logger.error(f"Error getting user data: {str(e)}")
+        return f"Error loading user data: {str(e)[:100]}..."
+
+def generate_context_aware_response(user, user_message):
+    """Generate intelligent response based on user context when API fails"""
+    
+    user_message_lower = user_message.lower()
+    
+    # Check for specific intents
+    if any(word in user_message_lower for word in ['photo', 'upload', 'image']):
+        try:
+            profile = Profile.objects.get(user=user)
+            if profile.user_type == 'photographer':
+                return "As a photographer, you can upload photos using the 'Upload Photos' button on your admin dashboard. Maximum file size is 10MB per photo. You can set prices and categorize them for your clients."
+            else:
+                return "You can browse photos in the gallery. If you want to upload photos, you need a photographer account. Contact support@photovault.com to upgrade your account."
+        except:
+            return "Photo uploads are available for photographer accounts. Maximum file size is 10MB. Supported formats: JPG, PNG, HEIC."
+    
+    elif any(word in user_message_lower for word in ['order', 'track', 'status']):
+        try:
+            recent_order = PrintOrder.objects.filter(user=user).order_by('-created_at').first()
+            if recent_order:
+                return f"Your most recent order is #{recent_order.order_number} ({recent_order.get_status_display()}). Visit /track-order/ to see all your orders and their current status."
+            else:
+                return "You don't have any print orders yet. Select photos and click 'Order Prints' to create your first order."
+        except:
+            return "You can track your orders in the 'Track Order' section. Each order has a unique number and status updates."
+    
+    elif any(word in user_message_lower for word in ['price', 'cost', 'how much']):
+        return """Print pricing:
+• 4x6: KSH 200
+• 5x7: KSH 300  
+• 8x10: KSH 500
+• 11x14: KSH 800
+• 16x20: KSH 1200
+• 20x30: KSH 2000
+Framing: +KSH 500 per print
+Shipping: Standard KSH 200, Express KSH 500, Overnight KSH 1000
+Tax: 8% on all orders"""
+    
+    elif any(word in user_message_lower for word in ['cart', 'basket', 'checkout']):
+        try:
+            cart_count = Cart.objects.filter(user=user, is_active=True).count()
+            if cart_count > 0:
+                return f"You have {cart_count} items in your cart. Visit /cart/ to review and checkout. Total will be calculated based on your selections."
+            else:
+                return "Your cart is empty. Browse photos and click 'Add to Cart' to start shopping."
+        except:
+            return "Visit /cart/ to view your shopping cart. You can add photos from the gallery."
+    
+    elif any(word in user_message_lower for word in ['help', 'support', 'contact']):
+        return "For support, email support@photovault.com (9 AM - 6 PM EAT). Include your username and any relevant order numbers. You can also check the help sections in your dashboard."
+    
+    elif any(word in user_message_lower for word in ['account', 'profile', 'settings']):
+        profile_type = "photographer" if hasattr(user, 'profile') and user.profile.user_type == 'photographer' else "customer"
+        return f"You have a {profile_type} account. Update your profile information from your dashboard settings. For account issues, contact support@photovault.com."
+    
+    # Default response
+    return """I'm your PhotoVault assistant! I can help you with:
+• Photo uploads and management
+• Print orders and pricing
+• Order tracking
+• Account questions
+• Cart and checkout
+
+What specific help do you need today?"""
 
 # Create your views here.
 def base(request):
