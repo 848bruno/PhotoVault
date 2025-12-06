@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Dashboard - PhotoVault{% endblock %}
+{% block title %}My-Dashboard - PhotoVault{% endblock %}
 
 {% block auth_buttons %}
     <button class="btn-logout" onclick="logout()">
@@ -93,10 +93,10 @@
             <div>
                 <h1 class="h2 mb-0 text-pv-deep">
                     <i class="fas fa-chart-line me-2"></i>
-                    Admin Dashboard
+                    My Dashboard
                     
                 </h1>
-                <p class="text-muted mb-0 mt-2">Welcome back, Admin! Here's what's happening with your business today.</p>
+                <p class="text-muted mb-0 mt-2">Welcome back, {{ user.username }}! Here's what's happening with your business today.</p>
             </div>
             <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
                 <div class="dropdown">
@@ -132,7 +132,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h6 class="text-muted mb-2">Total Revenue</h6>
-                            <h2 class="mb-0 text-pv-light" id="total-revenue">$4,256.80</h2>
+                            <h2 class="mb-0 text-pv-light" id="total-revenue">KSH 4,256.80</h2>
                             <div class="metric-change text-success">
                                 <i class="fas fa-arrow-up me-1"></i>
                                 <span id="revenue-change">12.5%</span> from last month
@@ -192,7 +192,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h6 class="text-muted mb-2">Avg. Order Value</h6>
-                            <h2 class="mb-0" id="avg-order-value">$34.33</h2>
+                            <h2 class="mb-0" id="avg-order-value">KSH 34.33</h2>
                             <div class="metric-change text-danger">
                                 <i class="fas fa-arrow-down me-1"></i>
                                 <span id="aov-change">2.1%</span> from last month
@@ -382,7 +382,7 @@
                                     <h6 class="mb-1">Wedding Ceremony #1</h6>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-muted">Wedding Category</small>
-                                        <span class="badge bg-pv-light">$29.99</span>
+                                        <span class="badge bg-pv-light">KSH 29.99</span>
                                     </div>
                                 </div>
                             </div>
@@ -393,7 +393,7 @@
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <span class="text-muted">Revenue:</span>
-                                    <strong class="text-pv-light">$719.76</strong>
+                                    <strong class="text-pv-light">KSH 719.76</strong>
                                 </div>
                             </div>
                         </div>
@@ -408,7 +408,7 @@
                                     <h6 class="mb-1">Family Portrait</h6>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-muted">Portrait Category</small>
-                                        <span class="badge bg-pv-light">$24.99</span>
+                                        <span class="badge bg-pv-light">KSH 24.99</span>
                                     </div>
                                 </div>
                             </div>
@@ -419,7 +419,7 @@
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <span class="text-muted">Revenue:</span>
-                                    <strong class="text-pv-light">$449.82</strong>
+                                    <strong class="text-pv-light">KSH 449.82</strong>
                                 </div>
                             </div>
                         </div>
@@ -434,7 +434,7 @@
                                     <h6 class="mb-1">Mountain Landscape</h6>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-muted">Landscape Category</small>
-                                        <span class="badge bg-pv-light">$19.99</span>
+                                        <span class="badge bg-pv-light">KSH 19.99</span>
                                     </div>
                                 </div>
                             </div>
@@ -445,7 +445,7 @@
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <span class="text-muted">Revenue:</span>
-                                    <strong class="text-pv-light">$299.85</strong>
+                                    <strong class="text-pv-light">KSH 299.85</strong>
                                 </div>
                             </div>
                         </div>
@@ -480,7 +480,7 @@
                         </div>
                         <div class="col-4">
                             <div class="metric-small">
-                                <div class="metric-number text-info">$156</div>
+                                <div class="metric-number text-info">KSH 156</div>
                                 <div class="metric-label">Avg. First Order</div>
                                 <div class="metric-change text-danger">
                                     <i class="fas fa-arrow-down me-1"></i>
@@ -756,7 +756,7 @@
             data: {
                 labels: ['Jan 8', 'Jan 9', 'Jan 10', 'Jan 11', 'Jan 12', 'Jan 13', 'Jan 14'],
                 datasets: [{
-                    label: 'Revenue ($)',
+                    label: 'Revenue (KSH )',
                     data: [450, 520, 480, 610, 540, 690, 720],
                     borderColor: 'rgba(76, 175, 80, 1)',
                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
@@ -777,7 +777,7 @@
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return `Revenue: $${context.parsed.y}`;
+                                return `Revenue: KSH ${context.parsed.y}`;
                             }
                         }
                     }
@@ -787,7 +787,7 @@
                         beginAtZero: true,
                         ticks: {
                             callback: function(value) {
-                                return '$' + value;
+                                return 'KSH ' + value;
                             }
                         }
                     }
@@ -953,7 +953,7 @@
         const newOrders = 124 + Math.floor(Math.random() * 10);
         const newClients = 58 + Math.floor(Math.random() * 5);
         
-        document.getElementById('total-revenue').textContent = `$${newRevenue}`;
+        document.getElementById('total-revenue').textContent = `KSH ${newRevenue}`;
         document.getElementById('total-orders').textContent = newOrders;
         document.getElementById('active-clients').textContent = newClients;
         
