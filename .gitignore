@@ -1,2 +1,2 @@
-views.py
-.env
+*.views.py
+*.env
