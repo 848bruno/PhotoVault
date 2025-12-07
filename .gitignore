@@ -1,2 +1,3 @@
-*.views.py
+media/
 *.env
+client_photos/

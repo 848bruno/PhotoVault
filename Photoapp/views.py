@@ -25,7 +25,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django.conf import settings
 
-OPENROUTER_API_KEY="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"
+
 def chatbot_page(request):
     return render(request, "chat.html")
 
