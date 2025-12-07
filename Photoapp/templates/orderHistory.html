@@ -15,12 +15,12 @@
             <h6 class="sidebar-section-title">Gallery</h6>
             <a href="{% url 'client' %}" class="sidebar-link">
                 <i class="fas fa-images"></i>
-                <span>Preview/Purchased</span>
+                <span>Gallery</span>
             </a>
             <a href="{% url 'cart' %}" class="sidebar-link">
                 <i class="fas fa-shopping-cart"></i>
                 <span>Cart</span>
-                <span class="badge bg-pv-light rounded-pill ms-auto" id="sidebar-cart-count">0</span>
+                <span class="badge bg-pv-light rounded-pill ms-auto" id="sidebar-cart-count">{{ cart_items.count|default:"0" }}</span>
             </a>
         </div>
         
@@ -29,7 +29,9 @@
             <a href="{% url 'trackOrder' %}" class="sidebar-link">
                 <i class="fas fa-shipping-fast"></i>
                 <span>Track Order</span>
-                <span class="badge bg-info rounded-pill ms-auto">3</span>
+                {% with active_orders_count=orders|length %}
+                <span class="badge bg-info rounded-pill ms-auto">{{ active_orders_count }}</span>
+                {% endwith %}
             </a>
             <a href="{% url 'order_history' %}" class="sidebar-link active">
                 <i class="fas fa-history"></i>
@@ -62,6 +64,7 @@
                     Order History
                 </h1>
                 <p class="text-muted mb-0 mt-2">View all your past orders and invoices</p>
+                <p class="text-muted small mb-0">{{ orders|length }} orders found</p>
             </div>
             <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
                 <div class="dropdown">
@@ -72,8 +75,10 @@
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="#" onclick="filterOrders('all')">All Orders</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterOrders('digital')">Digital Only</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterOrders('prints')">Prints Only</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('pending')">Pending</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('processing')">Processing</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('delivered')">Delivered</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterOrders('cancelled')">Cancelled</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" onclick="filterOrders('last-month')">Last 30 Days</a></li>
                         <li><a class="dropdown-item" href="#" onclick="filterOrders('last-year')">Last Year</a></li>
@@ -94,7 +99,7 @@
                     <div class="stat-icon mb-3">
                         <i class="fas fa-shopping-bag fa-2x text-pv-light"></i>
                     </div>
-                    <h3 class="stat-number">12</h3>
+                    <h3 class="stat-number">{{ orders|length }}</h3>
                     <p class="stat-label text-muted">Total Orders</p>
                 </div>
             </div>
@@ -105,7 +110,7 @@
                     <div class="stat-icon mb-3">
                         <i class="fas fa-dollar-sign fa-2x text-success"></i>
                     </div>
-                    <h3 class="stat-number">$489.50</h3>
+                    <h3 class="stat-number">KSH {{ total_spent|default:"0"|floatformat:2 }}</h3>
                     <p class="stat-label text-muted">Total Spent</p>
                 </div>
             </div>
@@ -116,7 +121,7 @@
                     <div class="stat-icon mb-3">
                         <i class="fas fa-print fa-2x text-info"></i>
                     </div>
-                    <h3 class="stat-number">8</h3>
+                    <h3 class="stat-number">{{ print_orders_count|default:"0" }}</h3>
                     <p class="stat-label text-muted">Print Orders</p>
                 </div>
             </div>
@@ -127,8 +132,8 @@
                     <div class="stat-icon mb-3">
                         <i class="fas fa-download fa-2x text-warning"></i>
                     </div>
-                    <h3 class="stat-number">15</h3>
-                    <p class="stat-label text-muted">Digital Downloads</p>
+                    <h3 class="stat-number">{{ digital_orders_count|default:"0" }}</h3>
+                    <p class="stat-label text-muted">Digital Purchases</p>
                 </div>
             </div>
         </div>
@@ -161,269 +166,144 @@
                         </tr>
                     </thead>
                     <tbody id="orders-table">
-                        <!-- Order 1 -->
-                        <tr class="order-row" data-type="digital" data-date="2024-01-15">
+                        {% for order in orders %}
+                        <tr class="order-row" data-type="print" data-date="{{ order.created_at|date:'Y-m-d' }}" data-status="{{ order.status }}">
                             <td class="ps-4">
-                                <strong>PV-2024-005</strong>
+                                <strong>{{ order.order_number }}</strong>
                             </td>
                             <td>
-                                Jan 15, 2024
-                                <div class="text-muted small">10:30 AM</div>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">Digital</span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="order-thumb me-2">
-                                        <img src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
-                                             alt="Wedding Photo" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
-                                    </div>
-                                    <div>
-                                        <div class="fw-medium">Wedding Portrait</div>
-                                        <small class="text-muted">1 item</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="fw-bold">$29.99</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-success">Completed</span>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2024-005')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2024-005')">
-                                        <i class="fas fa-file-invoice"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2024-005')">
-                                        <i class="fas fa-redo"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Order 2 -->
-                        <tr class="order-row" data-type="print" data-date="2024-01-10">
-                            <td class="ps-4">
-                                <strong>PV-2024-004</strong>
-                            </td>
-                            <td>
-                                Jan 10, 2024
-                                <div class="text-muted small">2:45 PM</div>
+                                {{ order.created_at|date:"M d, Y" }}
+                                <div class="text-muted small">{{ order.created_at|date:"h:i A" }}</div>
                             </td>
                             <td>
                                 <span class="badge bg-warning text-dark">Print</span>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
+                                    {% if order.printorderitem_set.first and order.printorderitem_set.first.photo %}
                                     <div class="order-thumb me-2">
-                                        <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
-                                             alt="Landscape" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
+                                        <img src="{{ order.printorderitem_set.first.photo.image.url }}" 
+                                             alt="{{ order.printorderitem_set.first.photo.description|default:'Photo' }}" 
+                                             class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
                                     </div>
+                                    {% endif %}
                                     <div>
-                                        <div class="fw-medium">Mountain Landscape</div>
-                                        <small class="text-muted">2 items • 8x10 prints</small>
+                                        <div class="fw-medium">{{ order.print_size }} Print Order</div>
+                                        <small class="text-muted">{{ order.printorderitem_set.count }} items • {{ order.paper_type }} paper</small>
+                                        {% if order.framing %}
+                                        <small class="text-muted d-block">With framing</small>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <span class="fw-bold">$45.98</span>
+                                <span class="fw-bold">KSH {{ order.total_amount|floatformat:2 }}</span>
                             </td>
                             <td>
-                                <span class="badge bg-success">Delivered</span>
+                                {% if order.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'processing' %}
+                                    <span class="badge bg-info">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'printed' %}
+                                    <span class="badge bg-primary">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'shipped' %}
+                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'delivered' %}
+                                    <span class="badge bg-success">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'cancelled' %}
+                                    <span class="badge bg-danger">{{ order.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                {% endif %}
                             </td>
                             <td class="pe-4 text-end">
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2024-004')">
+                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('{{ order.id }}')">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2024-004')">
+                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('{{ order.id }}')">
                                         <i class="fas fa-file-invoice"></i>
                                     </button>
-                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2024-004')">
-                                        <i class="fas fa-redo"></i>
+                                    {% if order.status != 'cancelled' and order.status != 'delivered' %}
+                                    <button class="btn btn-pv-outline" onclick="trackOrder('{{ order.id }}')">
+                                        <i class="fas fa-shipping-fast"></i>
                                     </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
-
-                        <!-- Order 3 -->
-                        <tr class="order-row" data-type="digital" data-date="2024-01-05">
-                            <td class="ps-4">
-                                <strong>PV-2024-003</strong>
-                            </td>
-                            <td>
-                                Jan 5, 2024
-                                <div class="text-muted small">9:15 AM</div>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">Digital</span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="order-thumb me-2">
-                                        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
-                                             alt="Portrait" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
-                                    </div>
-                                    <div>
-                                        <div class="fw-medium">Family Portrait</div>
-                                        <small class="text-muted">1 item • Commercial license</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="fw-bold">$39.99</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-success">Completed</span>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2024-003')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2024-003')">
-                                        <i class="fas fa-file-invoice"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2024-003')">
-                                        <i class="fas fa-redo"></i>
-                                    </button>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fas fa-history fa-3x mb-3"></i>
+                                    <h5>No orders yet</h5>
+                                    <p class="mb-3">You haven't placed any orders yet.</p>
+                                    <a href="{% url 'client' %}" class="btn btn-pv-primary">
+                                        <i class="fas fa-shopping-cart me-2"></i>
+                                        Start Shopping
+                                    </a>
                                 </div>
                             </td>
                         </tr>
-
-                        <!-- Order 4 -->
-                        <tr class="order-row" data-type="print" data-date="2023-12-28">
-                            <td class="ps-4">
-                                <strong>PV-2023-156</strong>
-                            </td>
-                            <td>
-                                Dec 28, 2023
-                                <div class="text-muted small">11:30 AM</div>
-                            </td>
-                            <td>
-                                <span class="badge bg-warning text-dark">Print</span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="order-thumb me-2">
-                                        <img src="https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
-                                             alt="Cityscape" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
-                                    </div>
-                                    <div>
-                                        <div class="fw-medium">City Skyline</div>
-                                        <small class="text-muted">3 items • Framed prints</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="fw-bold">$127.97</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-success">Delivered</span>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2023-156')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2023-156')">
-                                        <i class="fas fa-file-invoice"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2023-156')">
-                                        <i class="fas fa-redo"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <!-- Order 5 -->
-                        <tr class="order-row" data-type="digital" data-date="2023-12-20">
-                            <td class="ps-4">
-                                <strong>PV-2023-155</strong>
-                            </td>
-                            <td>
-                                Dec 20, 2023
-                                <div class="text-muted small">3:20 PM</div>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">Digital</span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="order-thumb me-2">
-                                        <img src="https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=50&q=80" 
-                                             alt="Product" class="rounded" style="width: 40px; height: 30px; object-fit: cover;">
-                                    </div>
-                                    <div>
-                                        <div class="fw-medium">Product Photos</div>
-                                        <small class="text-muted">4 items</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="fw-bold">$79.96</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-success">Completed</span>
-                            </td>
-                            <td class="pe-4 text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary" onclick="viewOrderDetails('PV-2023-155')">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary" onclick="downloadInvoice('PV-2023-155')">
-                                        <i class="fas fa-file-invoice"></i>
-                                    </button>
-                                    <button class="btn btn-pv-outline" onclick="reorder('PV-2023-155')">
-                                        <i class="fas fa-redo"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        {% if orders.has_other_pages %}
         <div class="card-footer bg-pv-very-light">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="text-muted small">
-                    Showing <span id="showing-count">5</span> of 12 orders
+                    Showing <span id="showing-count">{{ orders|length }}</span> of {{ orders.paginator.count }} orders
                 </div>
                 <nav>
                     <ul class="pagination pagination-sm mb-0">
+                        {% if orders.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ orders.previous_page_number }}">Previous</a>
+                        </li>
+                        {% else %}
                         <li class="page-item disabled">
                             <a class="page-link" href="#">Previous</a>
                         </li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        {% endif %}
+                        
+                        {% for i in orders.paginator.page_range %}
+                            {% if i >= orders.number|add:"-2" and i <= orders.number|add:"2" %}
+                            <li class="page-item {% if orders.number == i %}active{% endif %}">
+                                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if orders.has_next %}
                         <li class="page-item">
+                            <a class="page-link" href="?page={{ orders.next_page_number }}">Next</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
                             <a class="page-link" href="#">Next</a>
                         </li>
+                        {% endif %}
                     </ul>
                 </nav>
             </div>
         </div>
+        {% endif %}
     </div>
 
-    <!-- Order Details Modal Trigger -->
-    <div class="d-none">
-        <div id="orderDetailsModal" class="modal fade">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <!-- Modal content will be loaded dynamically -->
-                </div>
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <!-- Modal content will be loaded dynamically -->
             </div>
         </div>
     </div>
 
-    <!-- Spending Analysis -->
-    <div class="card mb-4">
+    <!-- Spending Analysis (Optional - can be implemented later) -->
+    <div class="card mb-4 d-none" id="spending-analysis">
         <div class="card-header bg-pv-very-light">
             <h5 class="mb-0">
                 <i class="fas fa-chart-pie me-2"></i>
@@ -433,43 +313,15 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <h6 class="mb-3">Order Type Distribution</h6>
+                    <h6 class="mb-3">Order Status Distribution</h6>
                     <div class="chart-container" style="height: 200px;">
-                        <canvas id="orderTypeChart"></canvas>
+                        <canvas id="orderStatusChart"></canvas>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <h6 class="mb-3">Monthly Spending</h6>
                     <div class="chart-container" style="height: 200px;">
                         <canvas id="monthlySpendingChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="row mt-4">
-                <div class="col-12">
-                    <h6 class="mb-3">Top Purchases</h6>
-                    <div class="list-group">
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-camera me-2 text-pv-light"></i>
-                                <span>Wedding Photography Package</span>
-                            </div>
-                            <span class="badge bg-pv-light rounded-pill">$189.99</span>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-print me-2 text-pv-light"></i>
-                                <span>Framed Landscape Prints (Set of 3)</span>
-                            </div>
-                            <span class="badge bg-pv-light rounded-pill">$127.97</span>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-download me-2 text-pv-light"></i>
-                                <span>Digital Commercial License Bundle</span>
-                            </div>
-                            <span class="badge bg-pv-light rounded-pill">$79.96</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -487,7 +339,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3 col-6 mb-3">
-                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="window.location.href='{% url "client" %};'">
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="window.location.href='{% url "client" %}'">
                         <i class="fas fa-shopping-cart fa-2x mb-2"></i>
                         <div>Shop More Photos</div>
                     </button>
@@ -505,9 +357,9 @@
                     </button>
                 </div>
                 <div class="col-md-3 col-6 mb-3">
-                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="leaveReview()">
-                        <i class="fas fa-star fa-2x mb-2"></i>
-                        <div>Leave Review</div>
+                    <button class="btn btn-pv-outline w-100 h-100 p-3" onclick="trackAllOrders()">
+                        <i class="fas fa-shipping-fast fa-2x mb-2"></i>
+                        <div>Track All Orders</div>
                     </button>
                 </div>
             </div>
@@ -518,15 +370,15 @@
 <style>
     /* Order History specific styles */
     .history-header {
-        border-bottom: 2px solid var(--pv-light-green);
+        border-bottom: 2px solid var(--pv-light);
     }
 
     .stat-icon {
-        color: var(--pv-light-green);
+        color: var(--pv-light);
     }
 
     .stat-number {
-        font-size: 2.5rem;
+        font-size: 2rem;
         font-weight: bold;
         line-height: 1;
         margin: 10px 0;
@@ -538,7 +390,7 @@
     }
 
     .order-row:hover {
-        background-color: var(--pv-very-light-green);
+        background-color: var(--pv-very-light);
         cursor: pointer;
     }
 
@@ -564,23 +416,30 @@
         position: relative;
     }
 
-    .list-group-item {
-        border-color: var(--border-color);
-        background-color: var(--bg-surface);
-    }
-
-    /* Badge colors */
-    .badge.bg-info {
-        background-color: #17a2b8 !important;
-    }
-
+    /* Status badge colors */
     .badge.bg-warning {
         background-color: #ffc107 !important;
-        color: #212529 !important;
+        color: #000 !important;
     }
-
+    
+    .badge.bg-info {
+        background-color: #0dcaf0 !important;
+        color: #000 !important;
+    }
+    
+    .badge.bg-primary {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+    }
+    
     .badge.bg-success {
-        background-color: var(--pv-light-green) !important;
+        background-color: #198754 !important;
+        color: #fff !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: #dc3545 !important;
+        color: #fff !important;
     }
 
     /* Responsive adjustments */
@@ -590,11 +449,11 @@
         }
         
         .stat-number {
-            font-size: 2rem;
+            font-size: 1.5rem;
         }
         
         .table-responsive {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         
         .btn-group-sm .btn {
@@ -606,85 +465,39 @@
             width: 30px;
             height: 25px;
         }
+        
+        .quick-actions .btn {
+            padding: 10px !important;
+        }
+        
+        .quick-actions i.fa-2x {
+            font-size: 1.5rem;
+        }
     }
 </style>
 
 <script>
-    // Load Chart.js from CDN
-    const chartScript = document.createElement('script');
-    chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    chartScript.onload = initializeCharts;
-    document.head.appendChild(chartScript);
-
     document.addEventListener('DOMContentLoaded', function() {
-        loadCartFromStorage();
         updateOrderCount();
         
         // Initialize search functionality
         document.getElementById('order-search').addEventListener('input', function(e) {
             searchOrders(e.target.value);
         });
+        
+        // Add click event to order rows
+        document.querySelectorAll('.order-row').forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Don't trigger if clicking on buttons
+                if (!e.target.closest('button')) {
+                    const orderId = this.querySelector('button[onclick*="viewOrderDetails"]')
+                        .getAttribute('onclick')
+                        .match(/'([^']+)'/)[1];
+                    viewOrderDetails(orderId);
+                }
+            });
+        });
     });
-
-    // Initialize charts
-    function initializeCharts() {
-        // Order Type Chart
-        const typeCtx = document.getElementById('orderTypeChart').getContext('2d');
-        new Chart(typeCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Digital', 'Prints', 'Framed'],
-                datasets: [{
-                    data: [7, 3, 2],
-                    backgroundColor: [
-                        'rgba(76, 175, 80, 0.8)',
-                        'rgba(33, 150, 243, 0.8)',
-                        'rgba(255, 193, 7, 0.8)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
-
-        // Monthly Spending Chart
-        const spendingCtx = document.getElementById('monthlySpendingChart').getContext('2d');
-        new Chart(spendingCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Oct', 'Nov', 'Dec', 'Jan'],
-                datasets: [{
-                    label: 'Spending ($)',
-                    data: [89.97, 156.45, 207.98, 125.50],
-                    backgroundColor: 'rgba(76, 175, 80, 0.6)',
-                    borderColor: 'rgba(76, 175, 80, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
 
     // Update order count
     function updateOrderCount() {
@@ -700,28 +513,35 @@
         
         rows.forEach(row => {
             let show = true;
+            const orderDate = new Date(row.dataset.date);
+            const now = new Date();
             
             switch(filter) {
-                case 'digital':
-                    show = row.dataset.type === 'digital';
+                case 'pending':
+                    show = row.dataset.status === 'pending';
                     break;
-                case 'prints':
-                    show = row.dataset.type === 'print';
+                case 'processing':
+                    show = row.dataset.status === 'processing';
+                    break;
+                case 'delivered':
+                    show = row.dataset.status === 'delivered';
+                    break;
+                case 'cancelled':
+                    show = row.dataset.status === 'cancelled';
                     break;
                 case 'last-month':
-                    const rowDate = new Date(row.dataset.date);
                     const monthAgo = new Date();
                     monthAgo.setMonth(monthAgo.getMonth() - 1);
-                    show = rowDate >= monthAgo;
+                    show = orderDate >= monthAgo;
                     break;
                 case 'last-year':
-                    const rowDateYear = new Date(row.dataset.date);
                     const yearAgo = new Date();
                     yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-                    show = rowDateYear >= yearAgo;
+                    show = orderDate >= yearAgo;
                     break;
                 default:
                     // 'all' - show all
+                    show = true;
             }
             
             row.classList.toggle('d-none', !show);
@@ -738,13 +558,13 @@
         let count = 0;
         
         rows.forEach(row => {
-            const orderNumber = row.querySelector('strong').textContent;
-            const orderDate = row.cells[1].textContent;
-            const orderType = row.cells[2].textContent;
-            const orderItems = row.cells[3].textContent;
-            const orderAmount = row.cells[4].textContent;
+            const orderNumber = row.querySelector('strong').textContent.toLowerCase();
+            const orderDate = row.cells[1].textContent.toLowerCase();
+            const orderStatus = row.querySelector('.badge').textContent.toLowerCase();
+            const orderItems = row.cells[3].textContent.toLowerCase();
+            const orderAmount = row.cells[4].textContent.toLowerCase();
             
-            const searchText = (orderNumber + orderDate + orderType + orderItems + orderAmount).toLowerCase();
+            const searchText = orderNumber + orderDate + orderStatus + orderItems + orderAmount;
             const show = searchText.includes(query.toLowerCase());
             
             row.classList.toggle('d-none', !show);
@@ -756,96 +576,165 @@
 
     // View order details
     function viewOrderDetails(orderId) {
-        showNotification(`Loading details for order ${orderId}...`, 'info');
-        // In a real app, this would open a modal with order details
-        // openOrderDetailsModal(orderId);
+        console.log('Viewing order details for:', orderId);
+        
+        // Show loading in modal
+        const modalContent = `
+            <div class="modal-header">
+                <h5 class="modal-title">Loading Order Details...</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Loading order details...</p>
+            </div>
+        `;
+        
+        document.querySelector('#orderDetailsModal .modal-content').innerHTML = modalContent;
+        const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+        modal.show();
+        
+        // Fetch order details
+        fetch(`/track-order/${orderId}/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.querySelector('#orderDetailsModal .modal-content').innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error loading order details:', error);
+            document.querySelector('#orderDetailsModal .modal-content').innerHTML = `
+                <div class="modal-header">
+                    <h5 class="modal-title">Error</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        Failed to load order details. Please try again.
+                    </div>
+                </div>
+            `;
+        });
     }
 
     // Download invoice
     function downloadInvoice(orderId) {
-        showNotification(`Downloading invoice for ${orderId}...`, 'info');
-        // Simulate download
+        showNotification(`Preparing invoice for order #${orderId}...`, 'info');
+        
+        // Create a simple PDF download (in real app, generate PDF on server)
+        const link = document.createElement('a');
+        link.href = `/orders/${orderId}/invoice/`;
+        link.target = '_blank';
+        link.click();
+        
         setTimeout(() => {
-            showNotification(`Invoice ${orderId}.pdf downloaded`, 'success');
+            showNotification(`Invoice downloaded for order #${orderId}`, 'success');
         }, 1000);
     }
 
-    // Reorder
-    function reorder(orderId) {
-        if (confirm(`Add all items from order ${orderId} to cart?`)) {
-            showNotification(`Adding items from ${orderId} to cart...`, 'info');
-            
-            // Simulate adding to cart
-            setTimeout(() => {
-                showNotification(`Items from ${orderId} added to cart`, 'success');
-                // In a real app, this would add items to cart and redirect
-                // window.location.href = "{% url 'cart' %}";
-            }, 1000);
-        }
+    // Track order
+    function trackOrder(orderId) {
+        window.open(`/track-order/${orderId}/`, '_blank');
+    }
+
+    // Track all orders
+    function trackAllOrders() {
+        window.location.href = "{% url 'trackOrder' %}";
     }
 
     // Export history
     function exportHistory() {
         showNotification('Preparing export...', 'info');
         
-        // Simulate export
-        setTimeout(() => {
-            showNotification('Order history exported successfully (orders.csv)', 'success');
-        }, 1500);
+        // Create CSV export
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Order Number,Date,Type,Items,Amount,Status\n";
+        
+        document.querySelectorAll('.order-row:not(.d-none)').forEach(row => {
+            const cells = row.cells;
+            const orderNumber = cells[0].querySelector('strong').textContent.trim();
+            const date = cells[1].textContent.trim().replace(/\n/g, ' ');
+            const type = cells[2].textContent.trim();
+            const items = cells[3].textContent.trim().replace(/\n/g, ' ');
+            const amount = cells[4].textContent.trim();
+            const status = cells[5].textContent.trim();
+            
+            csvContent += `"${orderNumber}","${date}","${type}","${items}","${amount}","${status}"\n`;
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'order_history.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification('Order history exported (order_history.csv)', 'success');
     }
 
     // Download all invoices
     function downloadAllInvoices() {
-        if (confirm('Download all invoices as a ZIP file?')) {
+        if (confirm('Download all invoices? This may take a moment.')) {
             showNotification('Preparing invoice archive...', 'info');
-            
+            // In a real app, this would call the server to generate a ZIP file
             setTimeout(() => {
-                showNotification('Invoice archive downloaded (invoices.zip)', 'success');
-            }, 2000);
+                showNotification('Feature coming soon!', 'info');
+            }, 1500);
         }
     }
 
     // Contact support
     function contactSupport() {
-        showNotification('Opening support ticket...', 'info');
-        // In a real app, this would open a support form
-    }
-
-    // Leave review
-    function leaveReview() {
-        showNotification('Opening review form...', 'info');
-        // In a real app, this would open a review modal
+        window.location.href = "mailto:support@photovault.com?subject=Order%20History%20Support";
     }
 
     // Show notification
     function showNotification(message, type) {
+        // Remove existing notifications
+        document.querySelectorAll('.alert-notification').forEach(el => el.remove());
+        
         const notification = document.createElement('div');
-        notification.className = `alert alert-${type} notification position-fixed`;
-        notification.style.top = '100px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
+        notification.className = `alert alert-${type} alert-dismissible fade show alert-notification position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px; max-width: 400px;';
         notification.innerHTML = `
             <div class="d-flex align-items-center">
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
-                <span>${message}</span>
+                <div class="me-2">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 
+                                     type === 'danger' ? 'fa-exclamation-circle' : 
+                                     type === 'warning' ? 'fa-exclamation-triangle' : 
+                                     'fa-info-circle'}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         `;
         
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            notification.remove();
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
         }, 3000);
     }
 
-    // Load cart from storage (for sidebar count)
-    function loadCartFromStorage() {
-        const savedCart = localStorage.getItem('photovault_cart');
-        if (savedCart) {
-            const cartItems = JSON.parse(savedCart);
-            const totalItems = cartItems.reduce((total, item) => total + item.quantity, 0);
-            document.getElementById('sidebar-cart-count').textContent = totalItems;
-        }
+    // Logout function
+    function logout() {
+        window.location.href = "{% url 'logout' %}";
+    }
+    
+    // Toggle sidebar for mobile
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.toggle('show');
     }
 </script>
 {% endblock %}
