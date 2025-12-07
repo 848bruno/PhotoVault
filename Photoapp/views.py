@@ -576,7 +576,7 @@ def client(request):
 
 def pic(request):
      # logged-in user
-    photos = Photo.objects.all().order_by("-uploaded_at")
+    photos = OrderStatusUpdate.objects.all()
     return render(request, 'pic.html', {'photos': photos})
 
 
@@ -1209,66 +1209,106 @@ def orderHistory(request):
 
 # Admin Views for Photographers
 @login_required
-def admin_orders(request):
-    status_filter = request.GET.get('status', '')
+def admin_orders(request, order_id):
+    # Only photographers allowed
+    order = get_object_or_404(PrintOrder, id=order_id)
 
-    # Base query: all orders
-    base_query = PrintOrder.objects.all().order_by('-created_at')
+    # Check if user has permission (photographer or order owner)
+    if not request.user.profile.is_photographer and order.user != request.user:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
 
-    # Apply status filter if given
-    if status_filter:
-        orders = base_query.filter(status=status_filter)
-    else:
-        orders = base_query
+    # Get order items
+    order_items = order.printorderitem_set.all().select_related('photo')
 
-    # Count pending orders
-    pending_count = base_query.filter(status='pending').count()
+    # Get status updates
+    status_updates = order.status_updates.all().order_by('-created_at')
+
+    # Build order timeline
+    timeline = []
+    if order.created_at:
+        timeline.append({
+            'date': order.created_at,
+            'status': 'Created',
+            'description': 'Order was placed'
+        })
+
+    for update in status_updates:
+        timeline.append({
+            'date': update.created_at,
+            'status': update.get_status_display(),
+            'description': update.notes or 'Status updated',
+            'updated_by': update.updated_by.get_full_name() or update.updated_by.username
+        })
 
     context = {
-        "orders": orders,
-        "pending_count": pending_count,
-        "status_filter": status_filter,
+        'order': order,
+        'order_items': order_items,
+        'status_updates': status_updates,
+        'timeline': timeline,
     }
-    return render(request, "admin_orders.html", context)
-@login_required
-@require_POST
-def update_order_status(request, order_id):
-    if not request.user.profile.is_photographer:
-        return JsonResponse({'success': False, 'error': 'Access denied'})
-    
-    try:
-        data = json.loads(request.body)
-        order = get_object_or_404(PrintOrder, id=order_id)
-        
-        # Check if user is the photographer for any photo in the order
-        if not order.photos.filter(photographer=request.user).exists():
-            return JsonResponse({'success': False, 'error': 'Not authorized'})
-        
-        new_status = data.get('status')
-        notes = data.get('notes', '')
-        
-        if new_status not in dict(PrintOrder.STATUS_CHOICES):
-            return JsonResponse({'success': False, 'error': 'Invalid status'})
-        
-        with transaction.atomic():
-            order.status = new_status
-            order.save()
-            
-            OrderStatusUpdate.objects.create(
-                order=order,
-                status=new_status,
-                notes=notes,
-                updated_by=request.user
-            )
-        
-        return JsonResponse({
-            'success': True,
-            'new_status': order.get_status_display(),
-            'status_class': get_status_class(new_status)
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+
+    # AJAX request → return JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        order_data = {
+            'id': order.id,
+            'order_number': order.order_number,
+            'created_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'user': {
+                'id': order.user.id,
+                'username': order.user.username,
+                'email': order.user.email,
+                'full_name': order.user.get_full_name(),
+            },
+            'print_size': order.print_size,
+            'paper_type': order.paper_type,
+            'quantity': order.quantity,
+            'framing': order.framing,
+            'frame_color': order.frame_color,
+            'shipping_method': order.shipping_method,
+            'shipping_address': order.shipping_address,
+            'shipping_city': order.shipping_city,
+            'shipping_state': order.shipping_state,
+            'shipping_zip': order.shipping_zip,
+            'contact_email': order.contact_email,
+            'contact_phone': order.contact_phone,
+            'subtotal': float(order.subtotal),
+            'shipping_cost': float(order.shipping_cost),
+            'tax': float(order.tax),
+            'total_amount': float(order.total_amount),
+            'status': order.status,
+            'status_display': order.get_status_display(),
+
+            'items': [
+                {
+                    'id': item.id,
+                    'photo_id': item.photo.id if item.photo else None,
+                    'photo_url': item.photo.image.url if item.photo and item.photo.image else None,
+                    'photo_description': item.photo.description if item.photo else 'Photo',
+                    'photo_category': item.photo.get_category_display() if item.photo else 'Unknown',
+                    'quantity': item.quantity,
+                    'unit_price': float(item.unit_price),
+                    'total_price': float(item.unit_price * item.quantity),
+                    'notes': item.notes,
+                }
+                for item in order_items
+            ],
+
+            'status_updates': [
+                {
+                    'id': update.id,
+                    'status': update.status,
+                    'status_display': update.get_status_display(),
+                    'notes': update.notes,
+                    'created_at': update.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': update.updated_by.get_full_name() or update.updated_by.username,
+                }
+                for update in status_updates
+            ]
+        }
+
+        return JsonResponse({'success': True, 'order': order_data})
+    return render(request, 'admin_orders.html', context)
+
 
 
 def get_status_class(status):
@@ -1480,3 +1520,441 @@ def admin_orders(request):
         "status_filter": status_filter,
     }
     return render(request, "admin_orders.html", context)
+# Add this import at the top if not already there
+from django.http import HttpResponseForbidden
+
+# Remove or comment out the duplicate update_order_status function (the first one)
+# Keep only the second one (around line 950)
+
+@login_required
+@require_POST
+def update_order_status(request, order_id):
+    """Update order status with AJAX - SIMPLIFIED VERSION"""
+    try:
+        data = json.loads(request.body)
+        order = get_object_or_404(PrintOrder, id=order_id)
+        
+        new_status = data.get('status')
+        notes = data.get('notes', '')
+        
+        # Validate status
+        valid_statuses = [choice[0] for choice in PrintOrder.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            return JsonResponse({'success': False, 'error': 'Invalid status'})
+        
+        with transaction.atomic():
+            # Update order status
+            old_status = order.status
+            order.status = new_status
+            order.save()
+            
+            # Create status update record
+            OrderStatusUpdate.objects.create(
+                order=order,
+                status=new_status,
+                notes=notes,
+                updated_by=request.user
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'new_status': order.get_status_display(),
+            'new_status_key': new_status,
+            'old_status': old_status,
+            'order_number': order.order_number,
+            'message': f'Order #{order.order_number} status updated to {order.get_status_display()}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+@login_required
+def get_order_details_ajax(request, order_id):
+    """Get order details for AJAX requests - SIMPLIFIED"""
+    try:
+        order = get_object_or_404(PrintOrder, id=order_id)
+        
+        # Get status updates
+        status_updates = order.status_updates.all().order_by('-created_at')
+        
+        # ========== FIXED: Get status choices from PrintOrder model ==========
+        # Import the PrintOrder model's STATUS_CHOICES directly
+        status_choices = []
+        
+        # Loop through all status choices defined in the model
+        for choice_value, choice_label in PrintOrder.STATUS_CHOICES:
+            status_choices.append({
+                'value': choice_value,        # e.g., 'pending', 'processing'
+                'label': choice_label,        # e.g., 'Pending', 'Processing'
+                'selected': choice_value == order.status  # Mark current status
+            })
+        # ====================================================================
+        
+        # Get order items if needed
+        try:
+            order_items = order.printorderitem_set.all().select_related('photo')
+            items_data = [
+                {
+                    'id': item.id,
+                    'photo_id': item.photo.id if item.photo else None,
+                    'photo_url': item.photo.image.url if item.photo and item.photo.image else '',
+                    'photo_description': item.photo.description if item.photo else 'Photo',
+                    'photo_category': item.photo.get_category_display() if item.photo else 'Unknown',
+                    'quantity': item.quantity,
+                    'unit_price': float(item.unit_price),
+                    'total_price': float(item.unit_price * item.quantity),
+                }
+                for item in order_items
+            ]
+        except:
+            items_data = []
+        
+        order_data = {
+            'id': order.id,
+            'order_number': order.order_number,
+            'created_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'user': {
+                'id': order.user.id,
+                'username': order.user.username,
+                'email': order.user.email,
+                'full_name': order.user.get_full_name(),
+            },
+            'print_size': order.print_size,
+            'paper_type': order.paper_type,
+            'quantity': order.quantity,
+            'framing': order.framing,
+            'frame_color': order.frame_color,
+            'shipping_method': order.shipping_method,
+            'shipping_address': order.shipping_address,
+            'shipping_city': order.shipping_city,
+            'shipping_state': order.shipping_state,
+            'shipping_zip': order.shipping_zip,
+            'contact_email': order.contact_email,
+            'contact_phone': order.contact_phone,
+            'subtotal': float(order.subtotal),
+            'shipping_cost': float(order.shipping_cost),
+            'tax': float(order.tax),
+            'total_amount': float(order.total_amount),
+            'status': order.status,
+            'status_display': order.get_status_display(),
+            
+            # ========== ADD THIS: Status choices array ==========
+            'status_choices': status_choices,
+            # ====================================================
+            
+            'items': items_data,
+            'status_updates': [
+                {
+                    'id': update.id,
+                    'status': update.status,
+                    'status_display': update.get_status_display(),
+                    'notes': update.notes,
+                    'created_at': update.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': update.updated_by.get_full_name() or update.updated_by.username,
+                }
+                for update in status_updates
+            ]
+        }
+        
+        return JsonResponse({'success': True, 'order': order_data})
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()  # Print full traceback to console
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def get_status_class(status):
+    """Helper function to get CSS class for status"""
+    status_classes = {
+        'pending': 'warning',
+        'processing': 'info',
+        'printed': 'primary',
+        'shipped': 'success',
+        'delivered': 'success',
+        'cancelled': 'danger',
+    }
+    return status_classes.get(status, 'secondary')
+
+
+@login_required
+def order_details(request, order_id):
+    """View detailed order information"""
+    order = get_object_or_404(PrintOrder, id=order_id)
+    
+    # Check if user has permission (admin or order owner)
+    if not request.user.profile.is_photographer and order.user != request.user:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    # Get order items
+    order_items = order.printorderitem_set.all().select_related('photo')
+    
+    # Get status updates
+    status_updates = order.status_updates.all().order_by('-created_at')
+    
+    # Calculate order timeline
+    timeline = []
+    if order.created_at:
+        timeline.append({
+            'date': order.created_at,
+            'status': 'Created',
+            'description': 'Order was placed'
+        })
+    
+    for update in status_updates:
+        timeline.append({
+            'date': update.created_at,
+            'status': update.get_status_display(),
+            'description': update.notes or 'Status updated',
+            'updated_by': update.updated_by.get_full_name() or update.updated_by.username
+        })
+    
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'status_updates': status_updates,
+        'timeline': timeline,
+    }
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Return JSON for AJAX requests
+        order_data = {
+            'id': order.id,
+            'order_number': order.order_number,
+            'created_at': order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'user': {
+                'id': order.user.id,
+                'username': order.user.username,
+                'email': order.user.email,
+                'full_name': order.user.get_full_name(),
+            },
+            'print_size': order.print_size,
+            'paper_type': order.paper_type,
+            'quantity': order.quantity,
+            'framing': order.framing,
+            'frame_color': order.frame_color,
+            'shipping_method': order.shipping_method,
+            'shipping_address': order.shipping_address,
+            'shipping_city': order.shipping_city,
+            'shipping_state': order.shipping_state,
+            'shipping_zip': order.shipping_zip,
+            'contact_email': order.contact_email,
+            'contact_phone': order.contact_phone,
+            'subtotal': float(order.subtotal),
+            'shipping_cost': float(order.shipping_cost),
+            'tax': float(order.tax),
+            'total_amount': float(order.total_amount),
+            'status': order.status,
+            'status_display': order.get_status_display(),
+            'items': [
+                {
+                    'id': item.id,
+                    'photo_id': item.photo.id if item.photo else None,
+                    'photo_url': item.photo.image.url if item.photo and item.photo.image else None,
+                    'photo_description': item.photo.description if item.photo else 'Photo',
+                    'photo_category': item.photo.get_category_display() if item.photo else 'Unknown',
+                    'quantity': item.quantity,
+                    'unit_price': float(item.unit_price),
+                    'total_price': float(item.unit_price * item.quantity),
+                    'notes': item.notes,
+                }
+                for item in order_items
+            ],
+            'status_updates': [
+                {
+                    'id': update.id,
+                    'status': update.status,
+                    'status_display': update.get_status_display(),
+                    'notes': update.notes,
+                    'created_at': update.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': update.updated_by.get_full_name() or update.updated_by.username,
+                }
+                for update in status_updates
+            ]
+        }
+        return JsonResponse({'success': True, 'order': order_data})
+    
+    # Return HTML template for regular requests
+    return render(request, 'order_details.html', context)
+
+
+@login_required
+def client_details(request, client_id):
+    """View detailed client information"""
+    # Check if user is photographer
+    if not request.user.profile.is_photographer:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    client = get_object_or_404(User, id=client_id, profile__user_type='customer')
+    profile = get_object_or_404(Profile, user=client)
+    
+    # Get client statistics
+    uploaded_photos = Photo.objects.filter(photographer=client).count()
+    purchased_photos = Purchase.objects.filter(user=client, status='completed').count()
+    
+    # Get print orders
+    print_orders = PrintOrder.objects.filter(user=client).order_by('-created_at')
+    total_orders = print_orders.count()
+    
+    # Calculate total spent
+    total_spent = print_orders.exclude(status='cancelled').aggregate(
+        total=Sum('total_amount')
+    )['total'] or Decimal('0.00')
+    
+    # Get recent orders
+    recent_orders = print_orders[:5]
+    
+    # Calculate average order value
+    avg_order_value = Decimal('0.00')
+    if total_orders > 0:
+        avg_order_value = total_spent / Decimal(str(total_orders))
+    
+    # Determine activity status
+    last_login = client.last_login
+    last_order = print_orders.first()
+    last_activity = max(
+        last_login or client.date_joined,
+        last_order.created_at if last_order else client.date_joined
+    )
+    is_active = (timezone.now() - last_activity) < timedelta(days=30)
+    
+    # Determine tier
+    if total_spent > Decimal('5000.00'):
+        tier = 'premium'
+        tier_class = 'pv-light'
+    elif total_spent > Decimal('1000.00'):
+        tier = 'standard'
+        tier_class = 'info'
+    else:
+        tier = 'basic'
+        tier_class = 'secondary'
+    
+    context = {
+        'client': client,
+        'profile': profile,
+        'uploaded_photos': uploaded_photos,
+        'purchased_photos': purchased_photos,
+        'total_orders': total_orders,
+        'total_spent': total_spent,
+        'avg_order_value': avg_order_value,
+        'recent_orders': recent_orders,
+        'last_activity': last_activity,
+        'is_active': is_active,
+        'tier': tier,
+        'tier_class': tier_class,
+        'client_id': f"CL-{client.id:04d}",
+    }
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        client_data = {
+            'id': client.id,
+            'username': client.username,
+            'email': client.email,
+            'first_name': client.first_name,
+            'last_name': client.last_name,
+            'full_name': client.get_full_name(),
+            'date_joined': client.date_joined.strftime('%Y-%m-%d'),
+            'last_login': client.last_login.strftime('%Y-%m-%d %H:%M:%S') if client.last_login else None,
+            'phone': profile.phone,
+            'uploaded_photos': uploaded_photos,
+            'purchased_photos': purchased_photos,
+            'total_orders': total_orders,
+            'total_spent': float(total_spent),
+            'avg_order_value': float(avg_order_value),
+            'is_active': is_active,
+            'tier': tier,
+        }
+        return JsonResponse({'success': True, 'client': client_data})
+    
+    return render(request, 'client_details.html', context)
+
+
+@login_required
+def bulk_assign_photos(request):
+    """Bulk assign photos to multiple clients"""
+    if not request.user.profile.is_photographer:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            client_ids = data.get('client_ids', [])
+            photo_ids = data.get('photo_ids', [])
+            
+            if not client_ids or not photo_ids:
+                return JsonResponse({'success': False, 'error': 'No clients or photos selected'})
+            
+            clients = User.objects.filter(id__in=client_ids, profile__user_type='customer')
+            photos = Photo.objects.filter(id__in=photo_ids)
+            
+            assigned_count = 0
+            for client in clients:
+                for photo in photos:
+                    # Check if photo is already assigned to this client
+                    if not Photo.objects.filter(id=photo.id, photographer=client).exists():
+                        # Create a copy of the photo for this client
+                        Photo.objects.create(
+                            photographer=client,
+                            image=photo.image,
+                            price=photo.price,
+                            category=photo.category,
+                            description=photo.description,
+                            is_purchased=False,
+                        )
+                        assigned_count += 1
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Assigned {assigned_count} photos to {clients.count()} clients',
+                'assigned_count': assigned_count
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def delete_clients(request):
+    """Delete selected clients"""
+    if not request.user.profile.is_photographer:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            client_ids = data.get('client_ids', [])
+            
+            if not client_ids:
+                return JsonResponse({'success': False, 'error': 'No clients selected'})
+            
+            # Delete clients and their related data
+            deleted_count = 0
+            for client_id in client_ids:
+                try:
+                    client = User.objects.get(id=client_id, profile__user_type='customer')
+                    # Delete related photos, orders, purchases, cart items
+                    Photo.objects.filter(photographer=client).delete()
+                    Purchase.objects.filter(user=client).delete()
+                    Cart.objects.filter(user=client).delete()
+                    PrintOrder.objects.filter(user=client).delete()
+                    
+                    # Delete profile
+                    Profile.objects.filter(user=client).delete()
+                    
+                    # Delete user
+                    client.delete()
+                    deleted_count += 1
+                    
+                except User.DoesNotExist:
+                    continue
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Deleted {deleted_count} client(s)',
+                'deleted_count': deleted_count
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})

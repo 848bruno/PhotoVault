@@ -11,7 +11,7 @@
 
 {% block sidebar %}
     <!-- Include admin sidebar -->
-      <nav class="sidebar">
+    <nav class="sidebar">
         <div class="sidebar-section">
             <h6 class="sidebar-section-title">Dashboard</h6>
             <a href="{% url 'admin' %}" class="sidebar-link">
@@ -174,218 +174,109 @@
     </div>
 
     <!-- Orders List -->
-    <div class="card">
+    <div class="card h-100">
+        <div class="card-header bg-pv-very-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-clock me-2 text-pv-light"></i>
+                Recent Orders
+                <span class="badge bg-warning ms-2">{{ pending_count }} Pending</span>
+            </h5>
+            <a href="{% url 'admin_orders' %}" class="btn btn-pv-outline btn-sm">
+                View All Orders
+                <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr class="bg-pv-very-light">
-                            <th class="ps-4">Order #</th>
+                            <th class="ps-4">Order ID</th>
                             <th>Client</th>
-                            <th>Photos</th>
-                            <th>Print Details</th>
-                            <th>Shipping</th>
-                            <th>Total</th>
+                            <th>Date</th>
+                            <th>Amount</th>
                             <th>Status</th>
-                            <th class="pe-4 text-end">Actions</th>
+                            <th class="pe-4 text-end">Action</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for order in orders %}
-                        <tr data-order-id="{{ order.id }}" class="order-row">
+                        <tr>
                             <td class="ps-4">
-                                <strong class="d-block">{{ order.order_number }}</strong>
-                                <small class="text-muted">{{ order.created_at|date:"M d, Y • h:i A" }}</small>
+                                <strong>#{{ order.order_number }}</strong>
+                                <div class="text-muted small">Order</div>
                             </td>
+
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="client-avatar me-2">
-                                        <i class="fas fa-user-circle fa-lg text-pv-light"></i>
+                                        <i class="fas fa-user-circle"></i>
                                     </div>
                                     <div>
-                                        <div class="fw-medium">{{ order.user.get_full_name|default:order.user.username }}</div>
-                                        <small class="text-muted d-block">{{ order.contact_email|default:"No email" }}</small>
-                                        <small class="text-muted">{{ order.contact_phone|default:"No phone" }}</small>
+                                        <div class="fw-medium">{{ order.user.username }}</div>
+                                        <small class="text-muted">{{ order.user.email }}</small>
                                     </div>
                                 </div>
                             </td>
-                            <td>
-                                <div class="order-photos-thumbs">
-                                    {% for item in order.printorderitem_set.all|slice:":3" %}
-                                    <div class="order-photo-thumb-wrapper" 
-                                         data-bs-toggle="tooltip" 
-                                         title="{{ item.photo.category }}">
-                                        {% if item.photo.image %}
-                                        <img src="{{ item.photo.image.url }}" 
-                                             alt="{{ item.photo.category }}"
-                                             class="order-photo-thumb"
-                                             onerror="this.onerror=null;this.src='/static/images/default-photo.png';">
-                                        {% else %}
-                                        <div class="order-photo-thumb bg-secondary d-flex align-items-center justify-content-center text-white">
-                                            <i class="fas fa-image"></i>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                    {% empty %}
-                                    <div class="text-muted small">No photos</div>
-                                    {% endfor %}
-                                    {% with item_count=order.printorderitem_set.count %}
-                                        {% if item_count > 3 %}
-                                        <div class="more-photos-badge">
-                                            <span class="badge bg-secondary">+{{ item_count|add:"-3" }}</span>
-                                        </div>
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="order-details-small">
-                                    <span class="badge bg-pv-very-light text-pv-deep">{{ order.print_size }}</span>
-                                    <small class="d-block mt-1">{{ order.paper_type|title }}</small>
-                                    <small class="d-block">Qty: {{ order.quantity }} each</small>
-                                    {% if order.framing %}
-                                    <small class="d-block text-success">
-                                        <i class="fas fa-frame me-1"></i>Framed
-                                        {% if order.frame_color %}
-                                        ({{ order.frame_color }})
-                                        {% endif %}
-                                    </small>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td>
-                                <small class="d-block fw-medium">{{ order.shipping_method|title }}</small>
-                                <small class="d-block text-muted">{{ order.shipping_city|default:"" }}{% if order.shipping_city and order.shipping_state %}, {% endif %}{{ order.shipping_state|default:"" }}</small>
-                                {% if order.estimated_delivery %}
-                                <small class="d-block text-success">
-                                    <i class="far fa-calendar-alt me-1"></i>
-                                    Est: {{ order.estimated_delivery|date:"M d" }}
-                                </small>
-                                {% endif %}
-                            </td>
+
+                            <td>{{ order.created_at|date:"M d, Y — h:i A" }}</td>
+
                             <td>
                                 <span class="fw-bold text-pv-light">KSH {{ order.total_amount|floatformat:2 }}</span>
-                                <small class="d-block text-muted">Paid</small>
                             </td>
+
                             <td>
                                 {% if order.status == 'pending' %}
-                                    <span class="badge bg-warning badge-status" id="status-badge-{{ order.id }}">
-                                        Pending
-                                    </span>
+                                    <span class="badge bg-warning text-dark" id="status-badge-{{ order.id }}">Pending</span>
                                 {% elif order.status == 'processing' %}
-                                    <span class="badge bg-info badge-status" id="status-badge-{{ order.id }}">
-                                        Processing
-                                    </span>
+                                    <span class="badge bg-info" id="status-badge-{{ order.id }}">Processing</span>
                                 {% elif order.status == 'printed' %}
-                                    <span class="badge bg-primary badge-status" id="status-badge-{{ order.id }}">
-                                        Printed
-                                    </span>
+                                    <span class="badge bg-primary" id="status-badge-{{ order.id }}">Printed</span>
                                 {% elif order.status == 'shipped' %}
-                                    <span class="badge bg-success badge-status" id="status-badge-{{ order.id }}">
-                                        Shipped
-                                    </span>
+                                    <span class="badge bg-success" id="status-badge-{{ order.id }}">Shipped</span>
                                 {% elif order.status == 'delivered' %}
-                                    <span class="badge bg-success badge-status" id="status-badge-{{ order.id }}">
-                                        Delivered
-                                    </span>
+                                    <span class="badge bg-success" id="status-badge-{{ order.id }}">Delivered</span>
                                 {% elif order.status == 'cancelled' %}
-                                    <span class="badge bg-danger badge-status" id="status-badge-{{ order.id }}">
-                                        Cancelled
-                                    </span>
+                                    <span class="badge bg-danger" id="status-badge-{{ order.id }}">Cancelled</span>
                                 {% else %}
-                                    <span class="badge bg-secondary badge-status" id="status-badge-{{ order.id }}">
-                                        {{ order.status|title }}
-                                    </span>
+                                    <span class="badge bg-secondary" id="status-badge-{{ order.id }}">{{ order.get_status_display }}</span>
                                 {% endif %}
-                                {% with last_update=order.status_updates.last %}
-                                    {% if last_update %}
-                                    <small class="d-block text-muted">
-                                        {{ last_update.created_at|timesince }} ago
-                                    </small>
-                                    {% endif %}
-                                {% endwith %}
                             </td>
+
                             <td class="pe-4 text-end">
-                                <div class="btn-group action-buttons">
-                                    <button class="btn btn-sm btn-pv-outline" 
-                                            onclick="viewOrderDetails({{ order.id }})"
-                                            data-bs-toggle="tooltip"
-                                            title="View Details">
-                                        <i class="fas fa-eye"></i>
+                                {% if order.status == 'pending' %}
+                                    <button class="btn btn-sm btn-pv-primary" onclick="openUpdateModal('{{ order.id }}')">
+                                        Process
                                     </button>
-                                    <button class="btn btn-sm btn-pv-primary dropdown-toggle" 
-                                            type="button" 
-                                            data-bs-toggle="dropdown"
-                                            data-bs-auto-close="outside"
-                                            aria-expanded="false"
-                                            data-bs-toggle="tooltip"
-                                            title="Change Status">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li class="dropdown-header">Update Status</li>
-                                        <li>
-                                            <a class="dropdown-item {% if order.status == 'pending' %}active{% endif %}" 
-                                               href="#" 
-                                               onclick="updateOrderStatus({{ order.id }}, 'pending')">
-                                                <i class="fas fa-circle me-2 text-warning"></i>
-                                                Mark as Pending
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item {% if order.status == 'processing' %}active{% endif %}" 
-                                               href="#" 
-                                               onclick="updateOrderStatus({{ order.id }}, 'processing')">
-                                                <i class="fas fa-circle me-2 text-info"></i>
-                                                Mark as Processing
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item {% if order.status == 'printed' %}active{% endif %}" 
-                                               href="#" 
-                                               onclick="updateOrderStatus({{ order.id }}, 'printed')">
-                                                <i class="fas fa-circle me-2 text-primary"></i>
-                                                Mark as Printed
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item {% if order.status == 'shipped' %}active{% endif %}" 
-                                               href="#" 
-                                               onclick="updateOrderStatus({{ order.id }}, 'shipped')">
-                                                <i class="fas fa-circle me-2 text-success"></i>
-                                                Mark as Shipped
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item {% if order.status == 'delivered' %}active{% endif %}" 
-                                               href="#" 
-                                               onclick="updateOrderStatus({{ order.id }}, 'delivered')">
-                                                <i class="fas fa-circle me-2 text-success"></i>
-                                                Mark as Delivered
-                                            </a>
-                                        </li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <a class="dropdown-item" href="#" 
-                                               onclick="sendNotification({{ order.id }})">
-                                                <i class="fas fa-bell me-2"></i>
-                                                Send Update
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item text-danger" href="#" 
-                                               onclick="cancelOrder({{ order.id }})">
-                                                <i class="fas fa-times me-2"></i>
-                                                Cancel Order
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                {% else %}
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-pv-outline" onclick="trackOrder('{{ order.id }}')">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-pv-outline dropdown-toggle dropdown-toggle-split" 
+                                                type="button" 
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false">
+                                            <span class="visually-hidden">Toggle Dropdown</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" onclick="openUpdateModal('{{ order.id }}')">
+                                                <i class="fas fa-edit me-2"></i>Update Status
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="cancelOrder('{{ order.id }}')">
+                                                <i class="fas fa-times me-2"></i>Cancel Order
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center py-5">
+                            <td colspan="6" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="fas fa-shopping-bag fa-3x mb-3"></i>
                                     <h5>No orders found</h5>
@@ -436,6 +327,59 @@
     </div>
 </div>
 
+<!-- Update Status Modal -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2 text-pv-light"></i>
+                    Update Order Status
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select New Status</label>
+                    <select class="form-select" id="updateStatusSelect">
+                        {% for status_key, status_name in PrintOrder.STATUS_CHOICES %}
+                        <option value="{{ status_key }}">{{ status_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Current Status History</label>
+                    <div class="card bg-light">
+                        <div class="card-body p-3">
+                            <div id="statusHistory" style="max-height: 200px; overflow-y: auto;">
+                                <!-- Status history will be loaded here -->
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <small class="text-muted ms-2">Loading status history...</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Status Notes (Optional)</label>
+                    <textarea class="form-control" id="updateStatusNotes" rows="3" placeholder="Add any notes about this status update..."></textarea>
+                    <small class="text-muted">This note will be saved in the status history.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-pv-primary" id="confirmUpdateBtn" onclick="confirmUpdateStatus()">
+                    <i class="fas fa-save me-2"></i>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Order Details Modal -->
 <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -445,47 +389,17 @@
     </div>
 </div>
 
-<!-- Add CSS for thumbnails and styling -->
 <style>
-    /* Order photo thumbnails */
-    .order-photos-thumbs {
+    /* Client avatar */
+    .client-avatar {
+        width: 40px;
+        height: 40px;
         display: flex;
-        gap: 8px;
         align-items: center;
-    }
-    
-    .order-photo-thumb-wrapper {
-        width: 50px;
-        height: 50px;
-        border-radius: 6px;
-        overflow: hidden;
-        border: 2px solid var(--pv-very-light);
-        flex-shrink: 0;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .order-photo-thumb-wrapper:hover {
-        border-color: var(--pv-light);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .order-photo-thumb {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-    
-    .more-photos-badge {
-        margin-left: 4px;
-    }
-    
-    /* Order row styling */
-    .order-row:hover {
+        justify-content: center;
         background-color: var(--pv-very-light);
+        border-radius: 50%;
+        color: var(--pv-light);
     }
     
     /* Status badge colors */
@@ -540,26 +454,10 @@
         margin-top: 4px;
     }
     
-    /* Client avatar */
-    .client-avatar {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--pv-very-light);
-        border-radius: 50%;
-    }
-    
     /* Action buttons */
     .action-buttons .btn {
         padding: 6px 10px;
         font-size: 0.875rem;
-    }
-    
-    /* Small order details */
-    .order-details-small {
-        font-size: 0.85rem;
     }
     
     /* Table improvements */
@@ -573,34 +471,108 @@
     
     .table td {
         vertical-align: middle;
-        padding-top: 15px;
-        padding-bottom: 15px;
+        padding-top: 12px;
+        padding-bottom: 12px;
     }
     
-    /* Hover effects for status dropdown items */
-    .dropdown-item:hover .fa-circle {
-        transform: scale(1.2);
-        transition: transform 0.2s ease;
+    /* Status History Timeline */
+    .timeline-sm {
+        position: relative;
+        padding-left: 20px;
+    }
+
+    .timeline-item-sm {
+        position: relative;
+        margin-bottom: 15px;
+    }
+
+    .timeline-item-sm.current {
+        border-left: 2px solid var(--pv-light);
+        padding-left: 18px;
+        margin-left: -20px;
+    }
+
+    .timeline-marker-sm {
+        position: absolute;
+        left: -8px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px currentColor;
+    }
+
+    .timeline-content-sm {
+        background-color: white;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+        font-size: 0.85rem;
+    }
+
+    .timeline-content-sm p {
+        margin-bottom: 2px;
+        color: #495057;
     }
     
-    /* Status text colors */
-    .text-warning { color: #ffc107; }
-    .text-info { color: #0dcaf0; }
-    .text-primary { color: #0d6efd; }
-    .text-success { color: #198754; }
-    .text-danger { color: #dc3545; }
+    /* Status color classes */
+    .bg-warning {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+    }
+
+    .bg-info {
+        background-color: #0dcaf0 !important;
+        color: #000 !important;
+    }
+
+    .bg-primary {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+    }
+
+    .bg-success {
+        background-color: #198754 !important;
+        color: #fff !important;
+    }
+
+    .bg-danger {
+        background-color: #dc3545 !important;
+        color: #fff !important;
+    }
+
+    .bg-secondary {
+        background-color: #6c757d !important;
+        color: #fff !important;
+    }
+
+    .text-warning {
+        color: #ffc107 !important;
+    }
+
+    .text-info {
+        color: #0dcaf0 !important;
+    }
+
+    .text-primary {
+        color: #0d6efd !important;
+    }
+
+    .text-success {
+        color: #198754 !important;
+    }
+
+    .text-danger {
+        color: #dc3545 !important;
+    }
+
+    .text-secondary {
+        color: #6c757d !important;
+    }
     
     /* Responsive adjustments */
     @media (max-width: 768px) {
-        .order-photos-thumbs {
-            flex-wrap: wrap;
-        }
-        
-        .order-photo-thumb-wrapper {
-            width: 40px;
-            height: 40px;
-        }
-        
         .stat-card {
             padding: 10px;
         }
@@ -614,162 +586,31 @@
         .stat-number {
             font-size: 1.2rem;
         }
+        
+        .table td, .table th {
+            padding: 8px 4px;
+            font-size: 0.85rem;
+        }
+        
+        .btn-group .btn {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
     }
 </style>
 
+<!-- Replace the entire JavaScript section with this corrected version: -->
 <script>
+    // Store current order ID for modals
+    let currentOrderId = null;
+    
     // Initialize tooltips
     document.addEventListener('DOMContentLoaded', function() {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
-        
-        // Auto-hide dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.action-buttons')) {
-                const openDropdowns = document.querySelectorAll('.action-buttons .dropdown-menu.show');
-                openDropdowns.forEach(dropdown => {
-                    dropdown.classList.remove('show');
-                });
-            }
-        });
     });
-    
-    // Update order status
-    function updateOrderStatus(orderId, newStatus) {
-        const notes = prompt('Add status notes (optional):');
-        
-        if (notes === null) return; // User cancelled
-        
-        fetch(`/admin/orders/${orderId}/update-status/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                status: newStatus,
-                notes: notes || ''
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const statusBadge = document.getElementById(`status-badge-${orderId}`);
-                
-                // Update badge text and class
-                const statusText = getStatusText(newStatus);
-                statusBadge.textContent = statusText;
-                
-                // Remove existing status classes and add new one
-                statusBadge.className = 'badge badge-status';
-                if (newStatus === 'pending') {
-                    statusBadge.classList.add('bg-warning');
-                } else if (newStatus === 'processing') {
-                    statusBadge.classList.add('bg-info');
-                } else if (newStatus === 'printed') {
-                    statusBadge.classList.add('bg-primary');
-                } else if (newStatus === 'shipped' || newStatus === 'delivered') {
-                    statusBadge.classList.add('bg-success');
-                } else if (newStatus === 'cancelled') {
-                    statusBadge.classList.add('bg-danger');
-                } else {
-                    statusBadge.classList.add('bg-secondary');
-                }
-                
-                // Update the timestamp
-                const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
-                const timeElement = row.querySelector('.text-muted small');
-                if (timeElement) {
-                    timeElement.textContent = 'just now';
-                }
-                
-                showNotification(`Order #${orderId} status updated to ${statusText}`, 'success');
-                
-                // Refresh the page after 2 seconds to update counts
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            } else {
-                showNotification('Error: ' + data.error, 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error updating order status', 'danger');
-        });
-    }
-    
-    // Helper function to get status text
-    function getStatusText(status) {
-        const statusMap = {
-            'pending': 'Pending',
-            'processing': 'Processing',
-            'printed': 'Printed',
-            'shipped': 'Shipped',
-            'delivered': 'Delivered',
-            'cancelled': 'Cancelled'
-        };
-        return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
-    }
-    
-    // View order details
-    function viewOrderDetails(orderId) {
-        // Open in new tab for now
-        window.open(`/track-order/${orderId}/`, '_blank');
-        
-        // Alternatively, you could load modal content:
-        // fetch(`/track-order/${orderId}/`)
-        //     .then(response => response.text())
-        //     .then(html => {
-        //         const modalContent = document.querySelector('#orderDetailsModal .modal-content');
-        //         modalContent.innerHTML = html;
-        //         const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
-        //         modal.show();
-        //     })
-        //     .catch(error => {
-        //         console.error('Error:', error);
-        //         showNotification('Error loading order details', 'danger');
-        //     });
-    }
-    
-    // Cancel order
-    function cancelOrder(orderId) {
-        if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
-            updateOrderStatus(orderId, 'cancelled');
-        }
-    }
-    
-    // Send notification to customer
-    function sendNotification(orderId) {
-        const message = prompt('Enter notification message for the customer:');
-        if (message) {
-            // Implement notification sending logic here
-            fetch(`/api/send-notification/${orderId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    message: message
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('Notification sent to customer', 'success');
-                } else {
-                    showNotification('Error sending notification: ' + data.error, 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Error sending notification', 'danger');
-            });
-        }
-    }
     
     // Helper function to get CSRF token
     function getCookie(name) {
@@ -819,6 +660,293 @@
                 notification.parentNode.removeChild(notification);
             }
         }, 5000);
+    }
+    
+    // Helper function to get status class for styling
+    function getStatusClass(status) {
+        const statusClasses = {
+            'pending': 'warning',
+            'processing': 'info',
+            'printed': 'primary',
+            'shipped': 'success',
+            'delivered': 'success',
+            'cancelled': 'danger',
+        };
+        return statusClasses[status] || 'secondary';
+    }
+    
+    // Open Update Modal for both pending and non-pending orders
+    function openUpdateModal(orderId) {
+        console.log('Opening update modal for order:', orderId);
+        currentOrderId = orderId;
+        
+        // Reset form
+        document.getElementById('updateStatusNotes').value = '';
+        
+        // Show loading state
+        const statusHistory = document.getElementById('statusHistory');
+        const statusSelect = document.getElementById('updateStatusSelect');
+        
+        statusHistory.innerHTML = `
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <small class="text-muted ms-2">Loading order details...</small>
+            </div>
+        `;
+        
+        // Clear and disable status select while loading
+        statusSelect.innerHTML = '<option value="">Loading...</option>';
+        statusSelect.disabled = true;
+        
+        // ========== FIXED URL: Use correct path ==========
+        // The current page is /admin/orders/, so we need /admin/orders/{orderId}/details/
+        fetch(`${orderId}/details/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API response data:', data);
+            if (data.success) {
+                const order = data.order;
+                console.log('Order loaded:', order);
+                console.log('Order has status_choices?', 'status_choices' in order);
+                console.log('status_choices value:', order.status_choices);
+                
+                // Populate status dropdown
+                statusSelect.innerHTML = '';
+                
+                // Check if status_choices exists
+                if (order.status_choices && Array.isArray(order.status_choices)) {
+                    // Use the status choices from backend
+                    order.status_choices.forEach(choice => {
+                        const option = document.createElement('option');
+                        option.value = choice.value;
+                        option.textContent = choice.label;
+                        option.selected = choice.selected || false;
+                        statusSelect.appendChild(option);
+                    });
+                } else {
+                    // Fallback: Use hardcoded status choices
+                    const fallbackChoices = [
+                        {value: 'pending', label: 'Pending', selected: order.status === 'pending'},
+                        {value: 'processing', label: 'Processing', selected: order.status === 'processing'},
+                        {value: 'printed', label: 'Printed', selected: order.status === 'printed'},
+                        {value: 'shipped', label: 'Shipped', selected: order.status === 'shipped'},
+                        {value: 'delivered', label: 'Delivered', selected: order.status === 'delivered'},
+                        {value: 'cancelled', label: 'Cancelled', selected: order.status === 'cancelled'}
+                    ];
+                    
+                    fallbackChoices.forEach(choice => {
+                        const option = document.createElement('option');
+                        option.value = choice.value;
+                        option.textContent = choice.label;
+                        option.selected = choice.selected;
+                        statusSelect.appendChild(option);
+                    });
+                    
+                    console.warn('status_choices not found in response, using fallback');
+                }
+                
+                statusSelect.disabled = false;
+                
+                // Display status history
+                if (order.status_updates && order.status_updates.length > 0) {
+                    displayStatusHistory(order.status_updates);
+                } else {
+                    displayStatusHistory([]);
+                }
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+                modal.show();
+            } else {
+                console.error('API returned error:', data.error);
+                showNotification('Error loading order details: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching order details:', error);
+            statusHistory.innerHTML = `
+                <div class="text-center py-3 text-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <small>Failed to load order details: ${error.message}</small>
+                </div>
+            `;
+            
+            // Still show modal even if history fails to load
+            const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+            modal.show();
+        });
+    }
+    
+    // Display status history in modal
+    function displayStatusHistory(statusUpdates) {
+        const statusHistory = document.getElementById('statusHistory');
+        
+        if (!statusUpdates || statusUpdates.length === 0) {
+            statusHistory.innerHTML = `
+                <div class="text-center py-3">
+                    <small class="text-muted">No status history available for this order.</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // Sort by date (newest first)
+        const sortedUpdates = [...statusUpdates].sort((a, b) => 
+            new Date(b.created_at) - new Date(a.created_at)
+        );
+        
+        let html = '<div class="timeline-sm">';
+        
+        sortedUpdates.forEach((update, index) => {
+            const date = new Date(update.created_at);
+            const formattedDate = date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const statusClass = getStatusClass(update.status);
+            
+            html += `
+                <div class="timeline-item-sm ${index === 0 ? 'current' : ''}">
+                    <div class="timeline-marker-sm bg-${statusClass}"></div>
+                    <div class="timeline-content-sm">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <strong class="text-${statusClass}">${update.status_display || update.status}</strong>
+                            <small class="text-muted">${formattedDate}</small>
+                        </div>
+                        ${update.notes ? `<p class="mb-1 small">${update.notes}</p>` : ''}
+                        <small class="text-muted">Updated by: ${update.updated_by || 'System'}</small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        statusHistory.innerHTML = html;
+    }
+    
+    // Confirm update status (from Update Modal)
+    function confirmUpdateStatus() {
+        if (!currentOrderId) {
+            showNotification('No order selected', 'danger');
+            return;
+        }
+        
+        const status = document.getElementById('updateStatusSelect').value;
+        const notes = document.getElementById('updateStatusNotes').value;
+        
+        // Validate status
+        if (!status) {
+            showNotification('Please select a status', 'warning');
+            return;
+        }
+        
+        updateOrderStatus(currentOrderId, status, notes);
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
+        if (modal) {
+            modal.hide();
+        }
+    }
+    
+    // Update order status - SIMPLIFIED
+    function updateOrderStatus(orderId, newStatus, notes = '') {
+        console.log('Updating order status:', { orderId, newStatus, notes });
+        
+        // ========== FIXED URL: Use correct path ==========
+        fetch(`${orderId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                status: newStatus,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Update response:', data);
+            if (data.success) {
+                // Update the status badge on the page
+                updateStatusBadge(orderId, newStatus);
+                showNotification(data.message || 'Status updated successfully', 'success');
+                
+                // Refresh the page after 2 seconds to update counts
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showNotification('Error: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating order status:', error);
+            showNotification('Error updating order status: ' + error.message, 'danger');
+        });
+    }
+    
+    // Update status badge visually
+    function updateStatusBadge(orderId, newStatus) {
+        const statusBadge = document.getElementById(`status-badge-${orderId}`);
+        if (!statusBadge) {
+            console.warn(`Status badge #status-badge-${orderId} not found`);
+            return;
+        }
+        
+        // Update badge text and class
+        const statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+        statusBadge.textContent = statusText;
+        
+        // Clear existing classes and add new ones
+        statusBadge.className = 'badge badge-status';
+        statusBadge.classList.add(`bg-${getStatusClass(newStatus)}`);
+        if (newStatus === 'pending' || newStatus === 'processing') {
+            statusBadge.classList.add('text-dark');
+        } else {
+            statusBadge.classList.add('text-white');
+        }
+    }
+    
+    // Track order (view details)
+    function trackOrder(orderId) {
+        // Open in new tab for now
+        window.open(`/track-order/${orderId}/`, '_blank');
+    }
+    
+    // Cancel order
+    function cancelOrder(orderId) {
+        if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+            const notes = prompt('Reason for cancellation (optional):');
+            updateOrderStatus(orderId, 'cancelled', notes || 'Order cancelled by admin');
+        }
+    }
+    
+    // Logout function
+    function logout() {
+        window.location.href = "{% url 'logout' %}";
+    }
+    
+    // Toggle sidebar for mobile
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.toggle('show');
     }
 </script>
 {% endblock %}

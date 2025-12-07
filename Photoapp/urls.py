@@ -1,19 +1,3 @@
-"""
-URL configuration for PhotoVault project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path
 from django.views.generic import TemplateView
@@ -33,7 +17,8 @@ urlpatterns = [
     # Main Pages
     path('client/', views.client, name='client'),
     path('admin-page/', views.admin, name='admin'),
-    path('trackOrder',views.trackOrder, name='trackOrder'),
+    path('trackOrder/', views.trackOrder, name='trackOrder'),
+    path('trackOrder/<int:order_id>/', views.trackOrder, name='track_order_detail'),
     path('pic/', views.pic, name='pic'),
       
     # Cart & Purchases
@@ -49,21 +34,24 @@ urlpatterns = [
     # Print Orders
     path('create-print-order/', views.create_print_order, name='create_print_order'),
     
-    # Order Tracking (FIXED: using the correct view names)
-    path('track-orders/', views.track_order_view, name='track_orders'),
-    path('track-order/<int:order_id>/', views.track_order_view, name='track_order_detail'),
+    # Order Tracking
     path('order-history/', views.orderHistory, name='order_history'),
     
     # Admin/Photographer Pages
     path('upload-photos/', views.upload_photos, name='upload_photos'),
-    path('admin_orders/', views.admin_orders, name='admin_orders'),
-    path('admin/orders/<int:order_id>/update-status/', views.update_order_status, name='update_order_status'),
+    path('orders/', views.admin_orders, name='admin_orders'),
+    path('orders/<int:order_id>/update-status/', views.update_order_status, name='update_order_status'),
+    path('orders/<int:order_id>/details/', views.order_details, name='order_details'),
     
-    # Other Pages (keeping old names for compatibility)
- 
+    # Client management
     path('client-manage/', views.clientManage, name='clientManage'),
-
-    path("chat/", views.chatbot_page, name="chatbot_page"),  # UI page
-    path("api/chatbot/", views.chatbot_api, name="chatbot_api"), # POST API
+    path('client/<int:client_id>/', views.client_details, name='client_details'),
+    path('clients/bulk-assign/', views.bulk_assign_photos, name='bulk_assign_photos'),
+    path('clients/delete/', views.delete_clients, name='delete_clients'),
+    
+    # Chatbot
+    path("chat/", views.chatbot_page, name="chatbot_page"),
+    path("api/chatbot/", views.chatbot_api, name="chatbot_api"),
+     path('orders/<int:order_id>/details/', views.get_order_details_ajax, name='get_order_details_ajax'),
+    
 ]
-
