@@ -229,3 +229,123 @@ class OrderStatusUpdate(models.Model):
     
     def __str__(self):
         return f"{self.order.order_number} - {self.get_status_display()} - {self.created_at}"
+
+# Add this at the end of your models.py file, before the closing
+
+class ContactMessage(models.Model):
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('read', 'Read'),
+        ('replied', 'Replied'),
+        ('closed', 'Closed'),
+    ]
+    
+    MESSAGE_TYPES = [
+        ('general', 'General Inquiry'),
+        ('support', 'Technical Support'),
+        ('billing', 'Billing/Payment'),
+        ('order', 'Order Related'),
+        ('feedback', 'Feedback/Suggestion'),
+        ('other', 'Other'),
+    ]
+    
+    # Message Information
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    subject = models.CharField(max_length=200)
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='general')
+    message = models.TextField()
+    
+    # User Info (if logged in)
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='contact_messages'
+    )
+    
+    # Status Tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    is_urgent = models.BooleanField(default=False)
+    is_replied = models.BooleanField(default=False)
+    
+    # Admin Response
+    admin_notes = models.TextField(blank=True, null=True)
+    admin_reply = models.TextField(blank=True, null=True)
+    replied_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='replied_messages'
+    )
+    replied_at = models.DateTimeField(null=True, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    read_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='read_messages'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Contact Message'
+        verbose_name_plural = 'Contact Messages'
+    
+    def __str__(self):
+        return f"{self.name} - {self.subject} ({self.get_status_display()})"
+    
+    @property
+    def is_new(self):
+        return self.status == 'new'
+    
+    @property
+    def is_read(self):
+        return self.status == 'read'
+    
+    @property
+    def is_closed(self):
+        return self.status == 'closed'
+    
+    @property
+    def time_since_creation(self):
+        """Return how long ago the message was created"""
+        from django.utils import timezone
+        delta = timezone.now() - self.created_at
+        
+        if delta.days > 0:
+            return f"{delta.days} days ago"
+        elif delta.seconds > 3600:
+            return f"{delta.seconds // 3600} hours ago"
+        elif delta.seconds > 60:
+            return f"{delta.seconds // 60} minutes ago"
+        else:
+            return "Just now"
+    
+    def mark_as_read(self, user=None):
+        """Mark message as read"""
+        from django.utils import timezone
+        self.status = 'read'
+        self.read_at = timezone.now()
+        if user:
+            self.read_by = user
+        self.save()
+    
+    def reply_message(self, reply_text, user=None):
+        """Add admin reply to message"""
+        from django.utils import timezone
+        self.admin_reply = reply_text
+        self.status = 'replied'
+        self.is_replied = True
+        self.replied_at = timezone.now()
+        if user:
+            self.replied_by = user
+        self.save()

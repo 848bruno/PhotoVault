@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .urgent { background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin: 10px 0; }
+        .info-box { background-color: white; border: 1px solid #ddd; padding: 15px; margin: 10px 0; }
+        .action-btn { display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📨 New Contact Message</h1>
+            <p>Action Required</p>
+        </div>
+        
+        <div class="content">
+            <h2>New Message Received</h2>
+            
+            <div class="info-box">
+                <strong>From:</strong> {{ contact_message.name }} ({{ contact_message.email }})<br>
+                <strong>Subject:</strong> {{ contact_message.subject }}<br>
+                <strong>Type:</strong> {{ contact_message.get_message_type_display }}<br>
+                <strong>Time:</strong> {{ contact_message.created_at|date:"F d, Y H:i" }}<br>
+                <strong>Status:</strong> New
+            </div>
+            
+            <h3>Message:</h3>
+            <div class="info-box">
+                {{ contact_message.message|linebreaks }}
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <a href="{{ admin_url }}" class="action-btn">View & Respond</a>
+            </div>
+            
+            <p><em>Please respond within 24 hours.</em></p>
+        </div>
+    </div>
+</body>
+</html>

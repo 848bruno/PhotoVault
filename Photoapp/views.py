@@ -19,6 +19,7 @@ from datetime import timedelta
 from django.db.models import Sum, Count, Avg, Q
 from datetime import datetime, timedelta
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 
 import json
@@ -1372,34 +1373,98 @@ def clientManage(request):
     if not request.user.profile.is_photographer:
         messages.error(request, 'Access denied. Photographer account required.')
         return redirect('home')
-    
+
+    # ---------------------------------------------------------
+    # INSERTED: Registration logic for adding new clients
+    # ---------------------------------------------------------
+    if request.method == 'POST':
+
+        # SAFELY get all fields
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        user_type = request.POST.get('user_type')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        terms = request.POST.get('terms')
+
+        # Validate required fields
+        if not all([first_name, last_name, username, email, user_type, password, confirm_password]):
+            messages.error(request, "Please fill in all required fields.")
+            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
+
+        # Validate terms
+        if not terms:
+            messages.error(request, "You must agree to the Terms and Privacy Policy.")
+            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
+
+        # Password match check
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
+
+        # Ensure username is unique
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists.")
+            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
+
+        # Ensure email is unique
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email already registered.")
+            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
+
+        # Create user
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email
+        )
+
+        # CREATE PROFILE associated with the user
+        Profile.objects.create(
+            user=user,
+            phone=phone,
+            user_type=user_type
+        )
+
+        messages.success(request, "Client added successfully!")
+        return redirect('clientManage')
+
+    # ---------------------------------------------------------
+    # ORIGINAL CLIENT MANAGEMENT LOGIC (NOT MODIFIED)
+    # ---------------------------------------------------------
+
     # Get all customers
     customers = User.objects.filter(
         profile__user_type='customer'
     ).select_related('profile').prefetch_related(
         'uploaded_photos', 'purchases', 'print_orders'
     )
-    
+
     # Add statistics to each customer
     customer_list = []
     total_revenue = Decimal('0.00')
-    
+
     for customer in customers:
         # Get photo counts
         total_photos = customer.uploaded_photos.count()
         purchased_photos = customer.purchases.filter(status='completed').count()
-        
+
         # Get order statistics
         print_orders = customer.print_orders.all()
         total_orders = print_orders.count()
         total_spent = print_orders.aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
         total_revenue += total_spent
-        
+
         # Calculate average order value
         avg_order_value = Decimal('0.00')
         if total_orders > 0:
             avg_order_value = total_spent / Decimal(str(total_orders))
-        
+
         # Determine activity status
         last_login = customer.last_login
         last_order = print_orders.order_by('-created_at').first()
@@ -1407,15 +1472,15 @@ def clientManage(request):
             last_login or customer.date_joined,
             last_order.created_at if last_order else customer.date_joined
         )
-        
+
         # Determine if new (registered within last 30 days)
         is_new = (timezone.now() - customer.date_joined) < timedelta(days=30)
-        
+
         # Determine if active (activity within last 30 days)
         is_active = False
         if last_activity:
             is_active = (timezone.now() - last_activity) < timedelta(days=30)
-        
+
         # Determine tier based on total spent
         if total_spent > Decimal('5000.00'):
             tier = 'premium'
@@ -1426,7 +1491,7 @@ def clientManage(request):
         else:
             tier = 'basic'
             tier_class = 'secondary'
-        
+
         # Determine status badge
         if is_new:
             status_text = 'New'
@@ -1437,7 +1502,7 @@ def clientManage(request):
         else:
             status_text = 'Inactive'
             status_class = 'warning'
-        
+
         # Create customer data dict
         customer_data = {
             'user': customer,
@@ -1457,24 +1522,24 @@ def clientManage(request):
             'status_class': status_class,
             'client_id': f"CL-{customer.id:04d}",
         }
-        
+
         customer_list.append(customer_data)
-    
+
     # Sort by total spent (descending)
     customer_list.sort(key=lambda x: x['total_spent'], reverse=True)
-    
+
     # Calculate statistics for the stats cards
     total_clients = len(customer_list)
     active_clients = len([c for c in customer_list if c['is_active']])
     premium_clients = len([c for c in customer_list if c['tier'] == 'premium'])
     repeat_rate = 0
-    
+
     if total_clients > 0:
         clients_with_multiple_orders = len([c for c in customer_list if c['total_orders'] > 1])
         repeat_rate = round((clients_with_multiple_orders / total_clients) * 100)
-    
+
     standard_clients = total_clients - premium_clients
-    
+
     context = {
         'customers': customer_list,
         'customer_count': total_clients,
@@ -1482,10 +1547,13 @@ def clientManage(request):
         'total_clients': total_clients,
         'active_clients': active_clients,
         'premium_clients': premium_clients,
-        'standard_clients': standard_clients,  # Add this line
+        'standard_clients': standard_clients,
         'repeat_rate': repeat_rate,
+        'profile_choices': Profile.USER_TYPES,     # Allow form to render choices
     }
+
     return render(request, 'clientManage.html', context)
+
 
 @login_required
 def admin_orders(request):
@@ -1659,7 +1727,7 @@ def get_order_details_ajax(request, order_id):
         
     except Exception as e:
         import traceback
-        traceback.print_exc()  # Print full traceback to console
+        traceback.print_exc() 
         return JsonResponse({'success': False, 'error': str(e)})
 
 def get_status_class(status):
@@ -1958,3 +2026,330 @@ def delete_clients(request):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+# Add these imports at the top if not already there
+from django.core.mail import send_mail, EmailMessage
+from django.conf import settings
+from django.template.loader import render_to_string
+from .models import ContactMessage
+
+# Add these functions to views.py
+
+@csrf_exempt
+def submit_contact_message(request):
+    """Handle contact form submission"""
+    if request.method == 'POST':
+        try:
+            data = request.POST
+            
+            # Get form data
+            name = data.get('name')
+            email = data.get('email')
+            phone = data.get('phone', '')
+            subject = data.get('subject')
+            message_type = data.get('message_type', 'general')
+            message = data.get('message')
+            
+            # Validate required fields
+            if not all([name, email, subject, message]):
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Please fill in all required fields'
+                })
+            
+            # Create contact message
+            contact_message = ContactMessage.objects.create(
+                name=name,
+                email=email,
+                phone=phone,
+                subject=subject,
+                message_type=message_type,
+                message=message,
+                user=request.user if request.user.is_authenticated else None
+            )
+            
+            # Send confirmation email to user
+            send_contact_confirmation_email(contact_message)
+            
+            # Send notification email to admin
+            send_admin_notification_email(contact_message)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Thank you for your message! We will get back to you soon.',
+                'message_id': contact_message.id
+            })
+            
+        except Exception as e:
+            logger.error(f"Error submitting contact message: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': 'An error occurred. Please try again later.'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid request method'
+    })
+
+def send_contact_confirmation_email(contact_message):
+    """Send confirmation email to user"""
+    try:
+        subject = f"Thank you for contacting PhotoVault - {contact_message.subject}"
+        
+        html_message = render_to_string('emails/contact_confirmation.html', {
+            'contact_message': contact_message,
+            'site_name': 'PhotoVault',
+            'support_email': 'support@photovault.com',
+            'support_phone': '+254 700 000 000',
+        })
+        
+        email = EmailMessage(
+            subject=subject,
+            body=html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[contact_message.email],
+            reply_to=['support@photovault.com']
+        )
+        email.content_subtype = 'html'
+        email.send(fail_silently=True)
+        
+    except Exception as e:
+        logger.error(f"Error sending confirmation email: {str(e)}")
+
+def send_admin_notification_email(contact_message):
+    """Send notification email to admin"""
+    try:
+        subject = f"New Contact Message: {contact_message.subject}"
+        
+        html_message = render_to_string('emails/admin_notification.html', {
+            'contact_message': contact_message,
+            'site_name': 'PhotoVault',
+            'admin_url': f"{settings.SITE_URL}/admin/contact-messages/{contact_message.id}/",
+        })
+        
+        email = EmailMessage(
+            subject=subject,
+            body=html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[settings.ADMIN_EMAIL],
+            cc=[settings.SUPPORT_EMAIL] if hasattr(settings, 'SUPPORT_EMAIL') else [],
+            reply_to=[contact_message.email]
+        )
+        email.content_subtype = 'html'
+        email.send(fail_silently=True)
+        
+    except Exception as e:
+        logger.error(f"Error sending admin notification: {str(e)}")
+
+# Admin views for managing contact messages
+@login_required
+def admin_contact_messages(request):
+    """Admin view to manage contact messages"""
+    if not request.user.profile.is_photographer:
+        return redirect('home')
+    
+    status_filter = request.GET.get('status', '')
+    message_type_filter = request.GET.get('type', '')
+    search_query = request.GET.get('q', '')
+    
+    # Base queryset
+    messages = ContactMessage.objects.all()
+    
+    # Apply filters
+    if status_filter:
+        messages = messages.filter(status=status_filter)
+    
+    if message_type_filter:
+        messages = messages.filter(message_type=message_type_filter)
+    
+    if search_query:
+        messages = messages.filter(
+            Q(name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(subject__icontains=search_query) |
+            Q(message__icontains=search_query)
+        )
+    
+    # Statistics
+    new_count = ContactMessage.objects.filter(status='new').count()
+    total_count = ContactMessage.objects.count()
+    urgent_count = ContactMessage.objects.filter(is_urgent=True).count()
+    replied_count = ContactMessage.objects.filter(is_replied=True).count()
+    
+    context = {
+        'messages': messages,
+        'status_filter': status_filter,
+        'message_type_filter': message_type_filter,
+        'search_query': search_query,
+        'new_count': new_count,
+        'total_count': total_count,
+        'urgent_count': urgent_count,
+        'replied_count': replied_count,
+        'status_choices': ContactMessage.STATUS_CHOICES,
+        'message_types': ContactMessage.MESSAGE_TYPES,
+    }
+    
+    return render(request, 'admin_contact_messages.html', context)
+
+@login_required
+def admin_contact_message_detail(request, message_id):
+    """Admin view for message details"""
+    if not request.user.profile.is_photographer:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    message = get_object_or_404(ContactMessage, id=message_id)
+    
+    if request.method == 'POST':
+        try:
+            action = request.POST.get('action')
+            
+            if action == 'mark_read':
+                message.mark_as_read(request.user)
+                return JsonResponse({'success': True, 'status': 'read'})
+            
+            elif action == 'reply':
+                reply_text = request.POST.get('reply_text')
+                if reply_text:
+                    message.reply_message(reply_text, request.user)
+                    # Send reply email to user
+                    send_reply_email(message)
+                    return JsonResponse({'success': True, 'status': 'replied'})
+                else:
+                    return JsonResponse({'success': False, 'error': 'Reply text required'})
+            
+            elif action == 'close':
+                message.status = 'closed'
+                message.save()
+                return JsonResponse({'success': True, 'status': 'closed'})
+            
+            elif action == 'add_note':
+                note = request.POST.get('note')
+                if note:
+                    message.admin_notes = note
+                    message.save()
+                    return JsonResponse({'success': True})
+            
+            elif action == 'toggle_urgent':
+                message.is_urgent = not message.is_urgent
+                message.save()
+                return JsonResponse({
+                    'success': True,
+                    'is_urgent': message.is_urgent
+                })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    # Mark as read when viewing
+    if message.status == 'new':
+        message.mark_as_read(request.user)
+    
+    context = {
+        'message': message,
+    }
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        message_data = {
+            'id': message.id,
+            'name': message.name,
+            'email': message.email,
+            'phone': message.phone or 'Not provided',
+            'subject': message.subject,
+            'message_type': message.get_message_type_display(),
+            'message': message.message,
+            'status': message.status,
+            'status_display': message.get_status_display(),
+            'is_urgent': message.is_urgent,
+            'is_replied': message.is_replied,
+            'admin_notes': message.admin_notes,
+            'admin_reply': message.admin_reply,
+            'created_at': message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'time_since': message.time_since_creation,
+            'user': {
+                'id': message.user.id if message.user else None,
+                'username': message.user.username if message.user else 'Guest',
+                'email': message.user.email if message.user else None,
+            } if message.user else None,
+        }
+        return JsonResponse({'success': True, 'message': message_data})
+    
+    return render(request, 'admin_contact_message_detail.html', context)
+
+def send_reply_email(contact_message):
+    """Send reply email to user"""
+    try:
+        subject = f"Re: {contact_message.subject}"
+        
+        html_message = render_to_string('emails/contact_reply.html', {
+            'contact_message': contact_message,
+            'site_name': 'PhotoVault',
+            'support_email': 'support@photovault.com',
+        })
+        
+        email = EmailMessage(
+            subject=subject,
+            body=html_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[contact_message.email],
+            reply_to=['support@photovault.com']
+        )
+        email.content_subtype = 'html'
+        email.send(fail_silently=True)
+        
+    except Exception as e:
+        logger.error(f"Error sending reply email: {str(e)}")
+
+@login_required
+def admin_contact_messages(request):
+    """Admin view to manage contact messages"""
+    if not request.user.profile.is_photographer:
+        return redirect('home')
+    
+    status_filter = request.GET.get('status', '')
+    message_type_filter = request.GET.get('type', '')
+    search_query = request.GET.get('q', '')
+    
+    # Base queryset
+    messages = ContactMessage.objects.all()
+    
+    # Apply filters
+    if status_filter:
+        messages = messages.filter(status=status_filter)
+    
+    if message_type_filter:
+        messages = messages.filter(message_type=message_type_filter)
+    
+    if search_query:
+        messages = messages.filter(
+            Q(name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(subject__icontains=search_query) |
+            Q(message__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(messages, 20)  # 20 messages per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    new_count = ContactMessage.objects.filter(status='new').count()
+    total_count = ContactMessage.objects.count()
+    urgent_count = ContactMessage.objects.filter(is_urgent=True).count()
+    replied_count = ContactMessage.objects.filter(is_replied=True).count()
+    
+    context = {
+        'messages': page_obj,
+        'status_filter': status_filter,
+        'message_type_filter': message_type_filter,
+        'search_query': search_query,
+        'new_count': new_count,
+        'total_count': total_count,
+        'urgent_count': urgent_count,
+        'replied_count': replied_count,
+        'status_choices': ContactMessage.STATUS_CHOICES,
+        'message_types': ContactMessage.MESSAGE_TYPES,
+    }
+    
+    return render(request, 'contact_messages.html', context)

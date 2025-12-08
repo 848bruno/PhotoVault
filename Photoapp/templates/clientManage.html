@@ -74,9 +74,12 @@
                 <i class="fas fa-upload"></i>
                 <span>Upload Photos</span>
             </a>
-            <a href="#" class="sidebar-link">
-                <i class="fas fa-photo-video"></i>
-                <span>Photo Library</span>
+              <a href="{% url 'admin_contact_messages' %}" class="sidebar-link active">
+                <i class="fas fa-envelope"></i>
+                <span>Contact Messages</span>
+                {% if new_count %}
+                <span class="badge bg-danger rounded-pill ms-auto">{{ new_count }}</span>
+                {% endif %}
             </a>
         </div>
     </nav>
@@ -509,57 +512,93 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addClientForm">
+                <form id="addClientForm" method="POST">
+                    {% csrf_token %}
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">First Name *</label>
-                            <input type="text" class="form-control" name="first_name" required>
+                            <input type="text" class="form-control" name="first_name" required 
+                                   placeholder="Enter your first name" 
+                                   value="{{ first_name|default:'' }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Last Name *</label>
-                            <input type="text" class="form-control" name="last_name" required>
+                            <input type="text" class="form-control" name="last_name" required 
+                                   placeholder="Enter your last name" 
+                                   value="{{ last_name|default:'' }}">
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Email Address *</label>
-                            <input type="email" class="form-control" name="email" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" name="phone">
-                        </div>
-                    </div>
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Username *</label>
-                            <input type="text" class="form-control" name="username" required>
+                            <input type="text" class="form-control" name="username" required 
+                                   placeholder="Choose a username" 
+                                   value="{{ username|default:'' }}">
+                            <small class="form-text text-muted">
+                                This will be your public display name
+                            </small>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Initial Password *</label>
-                            <input type="password" class="form-control" name="password" required>
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" name="email" required 
+                                   placeholder="Enter your email address" 
+                                   value="{{ email|default:'' }}">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Client Tier</label>
-                        <select class="form-select" name="tier" required>
-                            <option value="basic">Basic</option>
-                            <option value="standard">Standard</option>
-                            <option value="premium">Premium</option>
-                        </select>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone" 
+                                   placeholder="Optional phone number" 
+                                   value="{{ phone|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Account Type *</label>
+                            <select class="form-select" name="user_type" required>
+    <option value="">Select account type</option>
+
+    {% for value, label in profile_choices %}
+        <option value="{{ value }}" 
+            {% if user_type == value %}selected{% endif %}>
+            {{ label }}
+        </option>
+    {% endfor %}
+</select> 
+                        </div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="send_welcome" id="sendWelcomeEmail" checked>
-                        <label class="form-check-label" for="sendWelcomeEmail">
-                            Send welcome email with login credentials
-                        </label>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" name="password" required 
+                                   placeholder="Create a password" 
+                                   value="{{ password|default:'' }}">
+                            <small class="form-text text-muted">
+                            
+                            </small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Confirm Password *</label>
+                            <input type="password" class="form-control" name="confirm_password" required 
+                                   placeholder="Confirm your password" 
+                                   value="{{ confirm_password|default:'' }}">
+                        </div>
                     </div>
+                    
+                    
+                    
+                     <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn-pv-primary btn-lg">Add Client</button>
+                    </div>
+                    
+                  
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn-pv-primary" onclick="submitAddClient()">Add Client</button>
-            </div>
+            
         </div>
     </div>
 </div>
@@ -934,7 +973,7 @@
         
         if (confirm(`Are you sure you want to delete ${selectedIds.length} selected client(s)?`)) {
             // AJAX request to delete clients
-            fetch('/admin/clients/delete/', {
+            fetch('clients/delete/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -965,12 +1004,12 @@
 
     // View client details
     function viewClientDetails(clientId) {
-        window.location.href = `/admin/client/${clientId}/`;
+        window.location.href = `client/${clientId}/`;
     }
 
     // Edit client
     function editClient(clientId) {
-        window.location.href = `/admin/client/${clientId}/edit/`;
+        window.location.href = `client/${clientId}/edit/`;
     }
 
     // Assign photos to client

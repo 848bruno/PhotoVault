@@ -199,38 +199,127 @@
 
     <!-- Contact Section -->
     <section class="py-5" id="contact">
-        <div class="container">
-            <h2 class="display-5 fw-bold mb-5 text-center text-pv-deep">Get In Touch</h2>
-            <div class="row">
-                <div class="col-lg-8 mx-auto">
-                    <div class="contact-form">
-                        <h3 class="mb-4">Send us a Message</h3>
-                        <form>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Your Name</label>
-                                    <input type="text" class="form-control" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" class="form-control" required>
-                                </div>
+    <div class="container">
+        <h2 class="display-5 fw-bold mb-5 text-center text-pv-deep">Get In Touch</h2>
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="contact-form">
+                    <h3 class="mb-4">Send us a Message</h3>
+                    <form id="contactForm" onsubmit="submitContactForm(event)">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Your Name *</label>
+                                <input type="text" class="form-control" name="name" required 
+                                       value="{% if user.is_authenticated %}{{ user.get_full_name }}{% endif %}">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Subject</label>
-                                <input type="text" class="form-control" required>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email Address *</label>
+                                <input type="email" class="form-control" name="email" required
+                                       value="{% if user.is_authenticated %}{{ user.email }}{% endif %}">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Message</label>
-                                <textarea class="form-control" rows="5" required></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Phone Number (Optional)</label>
+                                <input type="tel" class="form-control" name="phone">
                             </div>
-                            <div class="d-grid">
-                                <button type="submit" class="btn-pv-primary btn-lg">Send Message</button>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Message Type</label>
+                                <select class="form-select" name="message_type">
+                                    <option value="general">General Inquiry</option>
+                                    <option value="support">Technical Support</option>
+                                    <option value="billing">Billing/Payment</option>
+                                    <option value="order">Order Related</option>
+                                    <option value="feedback">Feedback/Suggestion</option>
+                                    <option value="other">Other</option>
+                                </select>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Subject *</label>
+                            <input type="text" class="form-control" name="subject" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Message *</label>
+                            <textarea class="form-control" name="message" rows="5" required></textarea>
+                        </div>
+                        
+                        <div id="formMessage" class="alert d-none"></div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn-pv-primary btn-lg" id="submitBtn">
+                                Send Message
+                                <span class="spinner-border spinner-border-sm d-none" id="loadingSpinner"></span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function submitContactForm(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('contactForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const formMessage = document.getElementById('formMessage');
+    
+    // Show loading
+    submitBtn.disabled = true;
+    loadingSpinner.classList.remove('d-none');
+    formMessage.classList.add('d-none');
+    
+    // Get form data
+    const formData = new FormData(form);
+    
+    // Submit via AJAX
+    fetch('/contact/submit/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Success
+            formMessage.className = 'alert alert-success';
+            formMessage.textContent = data.message;
+            formMessage.classList.remove('d-none');
+            form.reset();
+            
+            // Show success message for 5 seconds
+            setTimeout(() => {
+                formMessage.classList.add('d-none');
+            }, 5000);
+        } else {
+            // Error
+            formMessage.className = 'alert alert-danger';
+            formMessage.textContent = data.error || 'An error occurred. Please try again.';
+            formMessage.classList.remove('d-none');
+        }
+    })
+    .catch(error => {
+        formMessage.className = 'alert alert-danger';
+        formMessage.textContent = 'Network error. Please check your connection and try again.';
+        formMessage.classList.remove('d-none');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        loadingSpinner.classList.add('d-none');
+    });
+}
+</script>
             
             <div class="row mt-5">
                 <div class="col-md-4 text-center mb-4 text-white">

@@ -75,9 +75,12 @@
                 <i class="fas fa-upload"></i>
                                 <span>Upload Photos</span>
             </a>
-            <a href="#" class="sidebar-link">
-                <i class="fas fa-photo-video"></i>
-                <span>Photo Library</span>
+             <a href="{% url 'admin_contact_messages' %}" class="sidebar-link active">
+                <i class="fas fa-envelope"></i>
+                <span>Contact Messages</span>
+                {% if new_count %}
+                <span class="badge bg-danger rounded-pill ms-auto">{{ new_count }}</span>
+                {% endif %}
             </a>
         </div>
     </nav>

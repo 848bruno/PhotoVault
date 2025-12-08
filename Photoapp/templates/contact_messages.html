@@ -1,0 +1,1169 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Messages - PhotoVault{% endblock %}
+
+{% block auth_buttons %}
+    <button class="btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline">Log Out</span>
+    </button>
+{% endblock %}
+
+{% block sidebar %}
+    <!-- Include admin sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Dashboard</h6>
+            <a href="{% url 'admin' %}" class="sidebar-link">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Overview</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Sales & Analytics</h6>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Sales Analytics</span>
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-chart-pie"></i>
+                <span>Revenue Reports</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Orders</h6>
+            <a href="{% url 'admin_orders' %}" class="sidebar-link">
+                <i class="fas fa-shopping-bag"></i>
+                <span>Manage Orders</span>
+                {% if pending_count %}
+                <span class="badge bg-warning rounded-pill ms-auto">{{ pending_count }}</span>
+                {% endif %}
+            </a>
+            <a href="#" class="sidebar-link">
+                <i class="fas fa-clock"></i>
+                <span>Pending Orders</span>
+                <span class="badge bg-warning rounded-pill ms-auto" id="pending-orders-badge">{{ pending_count }}</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Clients</h6>
+            <a href="{% url 'clientManage' %}" class="sidebar-link">
+                <i class="fas fa-users"></i>
+                <span>Client Management</span>
+            </a>
+            <a href="#" class="sidebar-link" onclick="openUploadModal()">
+                <i class="fas fa-user-plus"></i>
+                <span>Add New Client</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Content</h6>
+            <a href="{% url 'upload_photos' %}" class="sidebar-link">
+                <i class="fas fa-upload"></i>
+                <span>Upload Photos</span>
+            </a>
+           
+        </div>
+        
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Support</h6>
+            <a href="{% url 'admin_contact_messages' %}" class="sidebar-link active">
+                <i class="fas fa-envelope"></i>
+                <span>Contact Messages</span>
+                {% if new_count %}
+                <span class="badge bg-danger rounded-pill ms-auto">{{ new_count }}</span>
+                {% endif %}
+            </a>
+            
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Messages Header -->
+    <div class="dashboard-header bg-pv-very-light py-4 px-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="h2 mb-0 text-pv-deep">
+                    <i class="fas fa-envelope me-2"></i>
+                    Contact Messages
+                </h1>
+                <p class="text-muted mb-0 mt-2">Manage customer inquiries and support requests</p>
+                <p class="text-muted small mb-0">{{ total_count }} total messages • {{ new_count }} new</p>
+            </div>
+            <div class="d-flex align-items-center gap-3 mt-2 mt-md-0">
+                <div class="dropdown">
+                    <button class="btn btn-pv-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-filter me-2"></i>
+                        {% if status_filter %}
+                            {{ status_filter|title }}
+                        {% else %}
+                            Filter by Status
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item {% if not status_filter %}active{% endif %}" 
+                               href="{% url 'admin_contact_messages' %}">All Messages</a></li>
+                        {% for status_key, status_name in status_choices %}
+                        <li><a class="dropdown-item {% if status_filter == status_key %}active{% endif %}" 
+                               href="{% url 'admin_contact_messages' %}?status={{ status_key }}">
+                            {{ status_name }}
+                        </a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-pv-outline dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-tag me-2"></i>
+                        {% if message_type_filter %}
+                            {{ message_type_filter|title }}
+                        {% else %}
+                            Filter by Type
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item {% if not message_type_filter %}active{% endif %}" 
+                               href="{% url 'admin_contact_messages' %}">All Types</a></li>
+                        {% for type_key, type_name in message_types %}
+                        <li><a class="dropdown-item {% if message_type_filter == type_key %}active{% endif %}" 
+                               href="{% url 'admin_contact_messages' %}?type={{ type_key }}">
+                            {{ type_name }}
+                        </a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <button class="sidebar-toggle d-lg-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-danger">
+                    <i class="fas fa-envelope text-white"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ new_count }}</div>
+                    <div class="stat-label">New Messages</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="fas fa-exclamation-triangle text-dark"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ urgent_count }}</div>
+                    <div class="stat-label">Urgent</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success">
+                    <i class="fas fa-reply text-white"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ replied_count }}</div>
+                    <div class="stat-label">Replied</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-pv-deep">
+                    <i class="fas fa-clock text-white"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-number">{{ total_count }}</div>
+                    <div class="stat-label">Total Messages</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{% url 'admin_contact_messages' %}" class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text bg-pv-very-light">
+                            <i class="fas fa-search text-pv-light"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control" 
+                               name="q" 
+                               placeholder="Search by name, email, subject, or message..."
+                               value="{{ search_query|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-pv-primary w-100">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'admin_contact_messages' %}" class="btn btn-pv-outline w-100">
+                        <i class="fas fa-redo me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Messages List -->
+    <div class="card h-100">
+        <div class="card-header bg-pv-very-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-inbox me-2 text-pv-light"></i>
+                Messages
+                {% if messages %}
+                <span class="badge bg-warning ms-2">{{ messages|length }} messages</span>
+                {% endif %}
+            </h5>
+            <div class="btn-group">
+                <button type="button" class="btn btn-pv-primary btn-sm" onclick="markAllAsRead()">
+                    <i class="fas fa-eye me-1"></i>Mark All Read
+                </button>
+                <button type="button" class="btn btn-pv-outline btn-sm" onclick="exportMessages()">
+                    <i class="fas fa-file-export me-1"></i>Export
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr class="bg-pv-very-light">
+                            <th class="ps-4" style="width: 20px;">
+                                <input type="checkbox" class="form-check-input" id="selectAll">
+                            </th>
+                            <th>From</th>
+                            <th>Subject</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="messagesTable">
+                        {% for message in messages %}
+                        <tr class="message-row {% if message.status == 'new' %}bg-pv-very-light{% endif %}" 
+                            data-id="{{ message.id }}"
+                            data-status="{{ message.status }}">
+                            <td class="ps-4">
+                                <input type="checkbox" class="form-check-input message-checkbox" value="{{ message.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="client-avatar me-2">
+                                        {% if message.user %}
+                                        <i class="fas fa-user-circle text-pv-light"></i>
+                                        {% else %}
+                                        <i class="fas fa-user text-muted"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">{{ message.name }}</div>
+                                        <small class="text-muted">{{ message.email }}</small>
+                                        {% if message.user %}
+                                        <small class="badge bg-info">Client</small>
+                                        {% else %}
+                                        <small class="badge bg-secondary">Guest</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <strong class="d-block">{{ message.subject }}</strong>
+                                <small class="text-muted text-truncate d-block" style="max-width: 200px;">
+                                    {{ message.message|truncatechars:60 }}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge {% if message.message_type == 'urgent' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ message.get_message_type_display }}
+                                </span>
+                                {% if message.is_urgent %}
+                                <span class="badge bg-danger ms-1">
+                                    <i class="fas fa-exclamation-triangle"></i> Urgent
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ message.created_at|date:"M d, Y" }}
+                                <div class="text-muted small">{{ message.created_at|time:"h:i A" }}</div>
+                                <small class="text-muted">{{ message.time_since_creation }}</small>
+                            </td>
+                            <td>
+                                {% if message.status == 'new' %}
+                                    <span class="badge bg-danger" id="status-badge-{{ message.id }}">New</span>
+                                {% elif message.status == 'read' %}
+                                    <span class="badge bg-info" id="status-badge-{{ message.id }}">Read</span>
+                                {% elif message.status == 'replied' %}
+                                    <span class="badge bg-success" id="status-badge-{{ message.id }}">Replied</span>
+                                {% elif message.status == 'closed' %}
+                                    <span class="badge bg-secondary" id="status-badge-{{ message.id }}">Closed</span>
+                                {% else %}
+                                    <span class="badge bg-warning" id="status-badge-{{ message.id }}">{{ message.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-pv-outline" onclick="viewMessage({{ message.id }})" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-pv-outline dropdown-toggle dropdown-toggle-split" 
+                                            type="button" 
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                            title="More actions">
+                                        <span class="visually-hidden">Toggle Dropdown</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        {% if message.status == 'new' %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="markAsRead({{ message.id }})">
+                                                <i class="fas fa-eye me-2"></i>Mark as Read
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% endif %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="replyMessage({{ message.id }})">
+                                                <i class="fas fa-reply me-2"></i>Reply
+                                            </a>
+                                        </li>
+                                        {% if not message.is_urgent %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="toggleUrgent({{ message.id }})">
+                                                <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Mark as Urgent
+                                            </a>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="toggleUrgent({{ message.id }})">
+                                                <i class="fas fa-times me-2 text-secondary"></i>Remove Urgent
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#" onclick="closeMessage({{ message.id }})">
+                                                <i class="fas fa-times me-2"></i>Close
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fas fa-envelope-open fa-3x mb-3"></i>
+                                    <h5>No messages found</h5>
+                                    <p class="mb-3">
+                                        {% if search_query or status_filter or message_type_filter %}
+                                        Try adjusting your search or filters
+                                        {% else %}
+                                        When customers contact you, their messages will appear here
+                                        {% endif %}
+                                    </p>
+                                    <a href="{% url 'admin_contact_messages' %}" class="btn btn-pv-primary">
+                                        <i class="fas fa-redo me-2"></i>
+                                        Clear Filters
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        {% if messages.has_other_pages %}
+        <div class="card-footer bg-pv-very-light">
+            <nav aria-label="Messages pagination">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if messages.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if message_type_filter %}&type={{ message_type_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in messages.paginator.page_range %}
+                        {% if i >= messages.number|add:"-2" and i <= messages.number|add:"2" %}
+                        <li class="page-item {% if messages.number == i %}active{% endif %}">
+                            <a class="page-link" href="?page={{ i }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if message_type_filter %}&type={{ message_type_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ i }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if messages.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ messages.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if message_type_filter %}&type={{ message_type_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Message Detail Modal -->
+<div class="modal fade" id="messageDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Modal content will be loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- Reply Modal -->
+<div class="modal fade" id="replyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reply to Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="replyForm">
+                    <input type="hidden" id="replyMessageId">
+                    <div class="mb-3">
+                        <label class="form-label">Your Reply</label>
+                        <textarea class="form-control" id="replyText" rows="6" 
+                                  placeholder="Type your response here..." required></textarea>
+                        <small class="text-muted">This response will be emailed to the sender.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Add Internal Note (Optional)</label>
+                        <textarea class="form-control" id="replyNote" rows="2" 
+                                  placeholder="Add any internal notes about this response..."></textarea>
+                        <small class="text-muted">This note is only visible to admins.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-pv-primary" onclick="sendReply()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Reply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Message specific styles */
+    .message-row:hover {
+        background-color: var(--pv-very-light) !important;
+        cursor: pointer;
+    }
+    
+    .client-avatar {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--pv-very-light);
+        border-radius: 50%;
+        color: var(--pv-light);
+    }
+    
+    /* Status badge colors */
+    .badge.bg-danger { background-color: #dc3545 !important; color: #fff; }
+    .badge.bg-info { background-color: #0dcaf0 !important; color: #000; }
+    .badge.bg-success { background-color: #198754 !important; color: #fff; }
+    .badge.bg-secondary { background-color: #6c757d !important; color: #fff; }
+    .badge.bg-warning { background-color: #ffc107 !important; color: #000; }
+    
+    /* Stat cards */
+    .stat-card {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid var(--pv-very-light);
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+    
+    .stat-content {
+        flex-grow: 1;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        line-height: 1;
+        color: var(--pv-deep);
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+    
+    /* Message preview */
+    .message-preview {
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 10px;
+        background-color: var(--pv-very-light);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        font-size: 0.9rem;
+    }
+    
+    /* Bulk action buttons */
+    .bulk-actions {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        z-index: 1000;
+        border: 2px solid var(--pv-light);
+    }
+    
+    .bulk-actions.show {
+        display: flex;
+        gap: 10px;
+        animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .stat-card {
+            padding: 10px;
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+        
+        .stat-number {
+            font-size: 1.2rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+        
+        .btn-group-sm .btn {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+        
+        .message-row td {
+            padding: 8px 4px;
+        }
+        
+        .client-avatar {
+            width: 30px;
+            height: 30px;
+            font-size: 0.8rem;
+        }
+        
+        .bulk-actions {
+            width: 90%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .bulk-actions .btn {
+            margin: 2px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+    }
+</style>
+
+<script>
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        setupMessagePage();
+        
+        // Auto-refresh new message count every 60 seconds
+        setInterval(updateNewCount, 60000);
+    });
+    
+    // Setup message page functionality
+    function setupMessagePage() {
+        // Select all checkbox
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.message-checkbox');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+                showBulkActions();
+            });
+        }
+        
+        // Individual checkbox change
+        document.querySelectorAll('.message-checkbox').forEach(cb => {
+            cb.addEventListener('change', showBulkActions);
+        });
+        
+        // Make rows clickable
+        document.querySelectorAll('.message-row').forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Don't trigger if clicking on checkboxes or buttons
+                if (!e.target.closest('input[type="checkbox"]') && !e.target.closest('button')) {
+                    const messageId = this.dataset.id;
+                    viewMessage(messageId);
+                }
+            });
+        });
+    }
+    
+    // Show bulk actions when checkboxes are selected
+    function showBulkActions() {
+        const selectedCount = document.querySelectorAll('.message-checkbox:checked').length;
+        const bulkActions = document.getElementById('bulkActions') || createBulkActions();
+        
+        if (selectedCount > 0) {
+            bulkActions.classList.add('show');
+            document.getElementById('selectedCount').textContent = selectedCount;
+        } else {
+            bulkActions.classList.remove('show');
+        }
+    }
+    
+    // Create bulk actions container
+    function createBulkActions() {
+        const container = document.createElement('div');
+        container.id = 'bulkActions';
+        container.className = 'bulk-actions';
+        container.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold text-pv-deep">
+                    <i class="fas fa-check-square me-2"></i>
+                    <span id="selectedCount">0</span> selected
+                </span>
+                <button class="btn btn-sm btn-success" onclick="bulkMarkAsRead()">
+                    <i class="fas fa-eye me-1"></i>Mark as Read
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="bulkMarkAsUrgent()">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Mark Urgent
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="bulkCloseMessages()">
+                    <i class="fas fa-times me-1"></i>Close
+                </button>
+                <button class="btn btn-sm btn-pv-outline" onclick="clearSelection()">
+                    <i class="fas fa-times me-1"></i>Clear
+                </button>
+            </div>
+        `;
+        document.body.appendChild(container);
+        return container;
+    }
+    
+    // Clear selection
+    function clearSelection() {
+        document.querySelectorAll('.message-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        showBulkActions();
+    }
+    
+    // View message details
+    function viewMessage(messageId) {
+        fetch(`/admin/contact-messages/${messageId}/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const message = data.message;
+                
+                const modalContent = `
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-envelope me-2"></i>
+                            Message Details
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Message Header -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted">Sender Information</h6>
+                                        <p class="mb-1"><strong>Name:</strong> ${message.name}</p>
+                                        <p class="mb-1"><strong>Email:</strong> ${message.email}</p>
+                                        <p class="mb-1"><strong>Phone:</strong> ${message.phone || 'Not provided'}</p>
+                                        ${message.user ? 
+                                            `<p class="mb-0"><strong>Client:</strong> ${message.user.full_name} (${message.user.username})</p>` : 
+                                            '<p class="mb-0"><strong>Client:</strong> Guest user</p>'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-subtitle mb-2 text-muted">Message Details</h6>
+                                        <p class="mb-1"><strong>Subject:</strong> ${message.subject}</p>
+                                        <p class="mb-1"><strong>Type:</strong> ${message.message_type}</p>
+                                        <p class="mb-1"><strong>Status:</strong> <span class="badge ${getStatusClass(message.status)}">${message.status_display}</span></p>
+                                        <p class="mb-0"><strong>Sent:</strong> ${message.created_at} (${message.time_since})</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Message Content -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Message Content</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="message-preview">
+                                    ${message.message.replace(/\n/g, '<br>')}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Admin Response -->
+                        ${message.admin_reply ? `
+                        <div class="card mb-4 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">Your Response</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="message-preview">
+                                    ${message.admin_reply.replace(/\n/g, '<br>')}
+                                </div>
+                                <div class="mt-2 text-muted small">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Replied at: ${message.replied_at || 'N/A'} by ${message.replied_by || 'System'}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <!-- Admin Notes -->
+                        ${message.admin_notes ? `
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Internal Notes</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0">${message.admin_notes.replace(/\n/g, '<br>')}</p>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="modal-footer">
+                        <div class="btn-group">
+                            ${message.status !== 'replied' ? 
+                                `<button class="btn btn-pv-primary" onclick="replyMessage(${message.id})">
+                                    <i class="fas fa-reply me-1"></i>Reply
+                                </button>` : ''}
+                            ${message.is_urgent ? 
+                                `<button class="btn btn-warning" onclick="toggleUrgent(${message.id})">
+                                    <i class="fas fa-times me-1"></i>Remove Urgent
+                                </button>` : 
+                                `<button class="btn btn-danger" onclick="toggleUrgent(${message.id})">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Mark as Urgent
+                                </button>`}
+                            ${message.status !== 'closed' ? 
+                                `<button class="btn btn-secondary" onclick="closeMessage(${message.id})">
+                                    <i class="fas fa-times me-1"></i>Close
+                                </button>` : ''}
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.querySelector('#messageDetailModal .modal-content').innerHTML = modalContent;
+                const modal = new bootstrap.Modal(document.getElementById('messageDetailModal'));
+                modal.show();
+                
+                // Mark as read if still new
+                if (message.status === 'new') {
+                    markAsRead(messageId);
+                }
+            } else {
+                showNotification('Error loading message: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading message:', error);
+            showNotification('Error loading message details', 'danger');
+        });
+    }
+    
+    // Mark message as read
+    function markAsRead(messageId) {
+        fetch(`/admin/contact-messages/${messageId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ action: 'mark_read' })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update status badge
+                const badge = document.getElementById(`status-badge-${messageId}`);
+                if (badge) {
+                    badge.className = 'badge bg-info';
+                    badge.textContent = 'Read';
+                }
+                
+                // Remove new styling
+                const row = document.querySelector(`.message-row[data-id="${messageId}"]`);
+                if (row) {
+                    row.classList.remove('bg-pv-very-light');
+                }
+                
+                // Update new count
+                updateNewCount();
+                
+                showNotification('Message marked as read', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error marking as read:', error);
+        });
+    }
+    
+    // Bulk mark as read
+    function bulkMarkAsRead() {
+        const selectedIds = getSelectedMessageIds();
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`Mark ${selectedIds.length} message(s) as read?`)) {
+            selectedIds.forEach(id => markAsRead(id));
+            clearSelection();
+            showNotification(`${selectedIds.length} messages marked as read`, 'success');
+        }
+    }
+    
+    // Reply to message
+    function replyMessage(messageId) {
+        document.getElementById('replyMessageId').value = messageId;
+        document.getElementById('replyText').value = '';
+        document.getElementById('replyNote').value = '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('replyModal'));
+        modal.show();
+        
+        // Focus on reply textarea
+        setTimeout(() => {
+            document.getElementById('replyText').focus();
+        }, 300);
+    }
+    
+    // Send reply
+    function sendReply() {
+        const messageId = document.getElementById('replyMessageId').value;
+        const replyText = document.getElementById('replyText').value.trim();
+        const note = document.getElementById('replyNote').value.trim();
+        
+        if (!replyText) {
+            showNotification('Please enter a reply message', 'warning');
+            return;
+        }
+        
+        fetch(`/admin/contact-messages/${messageId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                action: 'reply',
+                reply_text: replyText,
+                note: note
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update status badge
+                const badge = document.getElementById(`status-badge-${messageId}`);
+                if (badge) {
+                    badge.className = 'badge bg-success';
+                    badge.textContent = 'Replied';
+                }
+                
+                // Close modals
+                bootstrap.Modal.getInstance(document.getElementById('replyModal')).hide();
+                const detailModal = bootstrap.Modal.getInstance(document.getElementById('messageDetailModal'));
+                if (detailModal) detailModal.hide();
+                
+                showNotification('Reply sent successfully', 'success');
+            } else {
+                showNotification('Error: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error sending reply:', error);
+            showNotification('Error sending reply', 'danger');
+        });
+    }
+    
+    // Toggle urgent status
+    function toggleUrgent(messageId) {
+        fetch(`/admin/contact-messages/${messageId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ action: 'toggle_urgent' })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const row = document.querySelector(`.message-row[data-id="${messageId}"]`);
+                if (row) {
+                    // Reload page to update urgent badges
+                    window.location.reload();
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling urgent:', error);
+        });
+    }
+    
+    // Bulk mark as urgent
+    function bulkMarkAsUrgent() {
+        const selectedIds = getSelectedMessageIds();
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`Mark ${selectedIds.length} message(s) as urgent?`)) {
+            selectedIds.forEach(id => toggleUrgent(id));
+            clearSelection();
+            showNotification(`${selectedIds.length} messages marked as urgent`, 'success');
+        }
+    }
+    
+    // Close message
+    function closeMessage(messageId) {
+        if (confirm('Are you sure you want to close this message?')) {
+            fetch(`/admin/contact-messages/${messageId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ action: 'close' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update status badge
+                    const badge = document.getElementById(`status-badge-${messageId}`);
+                    if (badge) {
+                        badge.className = 'badge bg-secondary';
+                        badge.textContent = 'Closed';
+                    }
+                    
+                    showNotification('Message closed', 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error closing message:', error);
+            });
+        }
+    }
+    
+    // Bulk close messages
+    function bulkCloseMessages() {
+        const selectedIds = getSelectedMessageIds();
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`Close ${selectedIds.length} message(s)?`)) {
+            selectedIds.forEach(id => closeMessage(id));
+            clearSelection();
+            showNotification(`${selectedIds.length} messages closed`, 'success');
+        }
+    }
+    
+    // Mark all messages as read
+    function markAllAsRead() {
+        const messages = document.querySelectorAll('.message-row[data-status="new"]');
+        if (messages.length === 0) return;
+        
+        if (confirm(`Mark all ${messages.length} new messages as read?`)) {
+            messages.forEach(row => {
+                const messageId = row.dataset.id;
+                markAsRead(messageId);
+            });
+            showNotification(`All ${messages.length} messages marked as read`, 'success');
+        }
+    }
+    
+    // Export messages
+    function exportMessages() {
+        // Get current filters
+        const status = '{{ status_filter|default:"" }}';
+        const type = '{{ message_type_filter|default:"" }}';
+        const query = '{{ search_query|default:"" }}';
+        
+        // Build export URL
+        let exportUrl = `/admin/contact-messages/export/?format=csv`;
+        if (status) exportUrl += `&status=${status}`;
+        if (type) exportUrl += `&type=${type}`;
+        if (query) exportUrl += `&q=${encodeURIComponent(query)}`;
+        
+        // Trigger download
+        window.open(exportUrl, '_blank');
+    }
+    
+    // Get selected message IDs
+    function getSelectedMessageIds() {
+        const checkboxes = document.querySelectorAll('.message-checkbox:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+    
+    // Update new message count
+    function updateNewCount() {
+        // This would typically fetch from an API endpoint
+        // For now, we'll just update the badge if we have one
+        const newBadge = document.querySelector('.sidebar-link.active .badge');
+        if (newBadge) {
+            // In a real app, you would fetch the actual count
+            // For now, we'll just show a placeholder
+            fetch('/admin/contact-messages/count/?status=new')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.count !== undefined) {
+                        newBadge.textContent = data.count;
+                        if (data.count > 0) {
+                            newBadge.classList.remove('bg-secondary');
+                            newBadge.classList.add('bg-danger');
+                        } else {
+                            newBadge.classList.remove('bg-danger');
+                            newBadge.classList.add('bg-secondary');
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Silently fail
+                });
+        }
+    }
+    
+    // Get status class for badges
+    function getStatusClass(status) {
+        const classes = {
+            'new': 'badge bg-danger',
+            'read': 'badge bg-info',
+            'replied': 'badge bg-success',
+            'closed': 'badge bg-secondary'
+        };
+        return classes[status] || 'badge bg-warning';
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Show notification
+    function showNotification(message, type) {
+        // Remove existing notifications
+        document.querySelectorAll('.alert-notification').forEach(el => el.remove());
+        
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show alert-notification position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px; max-width: 400px;';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="me-2">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 
+                                     type === 'danger' ? 'fa-exclamation-circle' : 
+                                     type === 'warning' ? 'fa-exclamation-triangle' : 
+                                     'fa-info-circle'}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+</script>
+{% endblock %}

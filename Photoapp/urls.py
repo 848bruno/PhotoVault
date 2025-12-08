@@ -52,6 +52,10 @@ urlpatterns = [
     # Chatbot
     path("chat/", views.chatbot_page, name="chatbot_page"),
     path("api/chatbot/", views.chatbot_api, name="chatbot_api"),
-     path('orders/<int:order_id>/details/', views.get_order_details_ajax, name='get_order_details_ajax'),
-    
+    path('orders/<int:order_id>/details/', views.get_order_details_ajax, name='get_order_details_ajax'),
+
+     # Contact messages
+    path('contact/submit/', views.submit_contact_message, name='submit_contact'),
+    path('contact-messages/', views.admin_contact_messages, name='admin_contact_messages'),
+    path('contact-messages/<int:message_id>/', views.admin_contact_message_detail, name='admin_contact_message_detail'),
 ]

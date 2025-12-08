@@ -1,0 +1,91 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<!-- Custom Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">New Messages</h5>
+                <h2 class="card-text">{{ new_count }}</h2>
+                <small>Require attention</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Urgent</h5>
+                <h2 class="card-text">{{ urgent_count }}</h2>
+                <small>High priority</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Replied</h5>
+                <h2 class="card-text">{{ replied_count }}</h2>
+                <small>Response sent</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total</h5>
+                <h2 class="card-text">{{ total_count }}</h2>
+                <small>All messages</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Buttons -->
+<div class="btn-toolbar mb-4" role="toolbar">
+    <div class="btn-group mr-2" role="group">
+        <a href="?status=new" class="btn btn-primary">
+            <i class="fas fa-envelope"></i> New ({{ new_count }})
+        </a>
+        <a href="?status__exact=read" class="btn btn-secondary">
+            <i class="fas fa-eye"></i> Read
+        </a>
+        <a href="?status__exact=replied" class="btn btn-success">
+            <i class="fas fa-reply"></i> Replied
+        </a>
+        <a href="?is_urgent__exact=1" class="btn btn-danger">
+            <i class="fas fa-exclamation-triangle"></i> Urgent
+        </a>
+    </div>
+</div>
+
+{{ block.super }}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .card {
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: none;
+    }
+    .card-title {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+    }
+    .card-text {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .btn-group .btn {
+        margin-right: 5px;
+    }
+    .btn i {
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
