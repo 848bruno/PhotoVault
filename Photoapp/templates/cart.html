@@ -38,11 +38,11 @@
         
         <div class="sidebar-section">
             <h6 class="sidebar-section-title">Account</h6>
-            <a href="#" class="sidebar-link">
+            <a href="#" class="sidebar-link" >
                 <i class="fas fa-user-cog"></i>
                 <span>Profile Settings</span>
             </a>
-            <a href="#" class="sidebar-link">
+            <a href="#" class="sidebar-link" onclick="openPaymentModal()">
                 <i class="fas fa-credit-card"></i>
                 <span>Payment Methods</span>
             </a>
@@ -273,46 +273,18 @@
                             </div>
                         </div>
 
-                        <!-- Payment Methods -->
-                        <div class="mb-4">
-                            <label class="form-label">Payment Method</label>
-                            <div class="payment-methods">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="paymentMethod" id="creditCard" checked>
-                                    <label class="form-check-label d-flex align-items-center" for="creditCard">
-                                        <i class="fas fa-credit-card me-2"></i>
-                                        Credit/Debit Card
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="radio" name="paymentMethod" id="paypal">
-                                    <label class="form-check-label d-flex align-items-center" for="paypal">
-                                        <i class="fab fa-paypal me-2"></i>
-                                        PayPal
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="paymentMethod" id="applePay">
-                                    <label class="form-check-label d-flex align-items-center" for="applePay">
-                                        <i class="fab fa-apple me-2"></i>
-                                        Apple Pay
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Checkout Button -->
-                        {% if cart_items %}
-                        <button class="btn-pv-primary btn-lg w-100 mb-3" onclick="proceedToCheckout()">
-                            <i class="fas fa-lock me-2"></i>
-                            Proceed to Secure Checkout
-                        </button>
-                        {% else %}
-                        <button class="btn-pv-primary btn-lg w-100 mb-3" disabled>
-                            <i class="fas fa-lock me-2"></i>
-                            Cart is Empty
-                        </button>
-                        {% endif %}
+                     <!-- In cart.html, update the checkout button section -->
+{% if cart_items %}
+<button class="btn-pv-primary btn-lg w-100 mb-3" onclick="processCartPayment()">
+    <i class="fas fa-lock me-2"></i>
+    Proceed to Payment
+</button>
+{% else %}
+<button class="btn-pv-primary btn-lg w-100 mb-3" disabled>
+    <i class="fas fa-lock me-2"></i>
+    Cart is Empty
+</button>
+{% endif %}
 
                         <!-- Security Info -->
                         <div class="text-center">
@@ -429,8 +401,281 @@
         }
     }
 </style>
+<!-- Add this modal at the bottom of cart.html -->
+<div class="modal fade" id="cartPaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Complete Cart Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="cartPaymentContent">
+                    <div class="text-center mb-4">
+                        <div class="payment-icon-large mb-3">
+                            <i class="fas fa-credit-card fa-3x text-primary"></i>
+                        </div>
+                        <h4>Pay KSH <span id="cartPaymentAmountDisplay">0.00</span></h4>
+                        <p class="text-muted">Secure payment powered by Paystack</p>
+                    </div>
+                    
+                    <form id="cartPaymentForm" onsubmit="processCartCheckout(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="cartPaymentEmail" 
+                                   value="{{ user.email|default:'' }}"
+                                   placeholder="Enter your email"
+                                   required>
+                            <small class="text-muted">Payment receipt will be sent to this email</small>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-lock me-2"></i>
+                            <small>Your payment is secured with 256-bit SSL encryption</small>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="cartPaymentSubmitBtn">
+                                <i class="fas fa-lock me-2"></i>
+                                Pay Securely
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Processing State -->
+                <div id="cartPaymentProcessing" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h5>Redirecting to Paystack...</h5>
+                        <p class="text-muted">You will be redirected to complete your payment securely</p>
+                    </div>
+                </div>
+                
+                <!-- Success State -->
+                <div id="cartPaymentSuccess" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="success-icon mb-3">
+                            <i class="fas fa-check-circle fa-3x text-success"></i>
+                        </div>
+                        <h5 class="text-success">Payment Successful!</h5>
+                        <p id="cartPaymentSuccessMessage" class="text-muted">Your cart has been processed</p>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="handleCartPaymentSuccess()">
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Error State -->
+                <div id="cartPaymentError" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="error-icon mb-3">
+                            <i class="fas fa-times-circle fa-3x text-danger"></i>
+                        </div>
+                        <h5 class="text-danger">Payment Failed</h5>
+                        <p id="cartPaymentErrorMessage" class="text-muted">There was an error processing your payment</p>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="resetCartPaymentModal()">
+                                Try Again
+                            </button>
+                            <button class="btn btn-outline-secondary ms-2" onclick="closeCartPaymentModal()">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
+// Cart Payment functionality
+async function processCartPayment() {
+    // Get cart total from the summary
+    const totalText = document.getElementById('total').textContent;
+    const totalAmount = parseFloat(totalText.replace('KSH', '').trim());
+    
+    if (totalAmount <= 0) {
+        alert('Cart total is invalid');
+        return;
+    }
+    
+    // Update modal content
+    document.getElementById('cartPaymentAmountDisplay').textContent = totalAmount.toFixed(2);
+    
+    // Reset modal states
+    resetCartPaymentModal();
+    
+    // Set email from user
+    const emailInput = document.getElementById('cartPaymentEmail');
+    if (emailInput && window.currentUserEmail) {
+        emailInput.value = window.currentUserEmail;
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('cartPaymentModal'));
+    modal.show();
+}
+
+async function processCartCheckout(event) {
+    event.preventDefault();
+    
+    const emailInput = document.getElementById('cartPaymentEmail');
+    if (!emailInput) return;
+    
+    const email = emailInput.value.trim();
+    const totalText = document.getElementById('total').textContent;
+    const totalAmount = parseFloat(totalText.replace('KSH', '').trim());
+    
+    if (!email) {
+        alert('Please enter your email address');
+        return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        alert('Please enter a valid email address');
+        return;
+    }
+    
+    // Show processing state
+    document.getElementById('cartPaymentContent').style.display = 'none';
+    document.getElementById('cartPaymentProcessing').style.display = 'block';
+    
+    try {
+        const response = await fetch('/process-cart-payment/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                email: email,
+                amount: totalAmount
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.authorization_url) {
+            // Open Paystack payment page
+            window.location.href = data.authorization_url;
+        } else {
+            // Show error
+            document.getElementById('cartPaymentProcessing').style.display = 'none';
+            document.getElementById('cartPaymentError').style.display = 'block';
+            document.getElementById('cartPaymentErrorMessage').textContent = 
+                data.error || 'Payment initialization failed';
+        }
+    } catch (error) {
+        console.error('Cart payment error:', error);
+        document.getElementById('cartPaymentProcessing').style.display = 'none';
+        document.getElementById('cartPaymentError').style.display = 'block';
+        document.getElementById('cartPaymentErrorMessage').textContent = 
+            'Network error. Please try again.';
+    }
+}
+
+function resetCartPaymentModal() {
+    document.getElementById('cartPaymentContent').style.display = 'block';
+    document.getElementById('cartPaymentProcessing').style.display = 'none';
+    document.getElementById('cartPaymentSuccess').style.display = 'none';
+    document.getElementById('cartPaymentError').style.display = 'none';
+}
+
+function closeCartPaymentModal() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('cartPaymentModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
+function handleCartPaymentSuccess() {
+    closeCartPaymentModal();
+    // Redirect to client page
+    setTimeout(() => {
+        window.location.href = '/client/';
+    }, 1000);
+}
+
+// Check if there's a success message in URL (after Paystack redirect)
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    
+    if (paymentStatus === 'success') {
+        // Show success notification
+        showNotification('Payment successful! Your photos have been purchased.', 'success');
+        
+        // Clear cart count
+        document.getElementById('cart-count').textContent = '0';
+        
+        // Reload after a delay to show updated purchased photos
+        setTimeout(() => {
+            window.location.href = '/client/';
+        }, 2000);
+    } else if (paymentStatus === 'failed') {
+        showNotification('Payment failed. Please try again.', 'danger');
+    }
+});
+
+// Notification function
+function showNotification(message, type) {
+    // Remove existing notification
+    const existingNotification = document.querySelector('.payment-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} payment-notification position-fixed`;
+    notification.style.cssText = `
+        top: 100px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 400px;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    const icon = type === 'success' ? 'check-circle' : 
+                 type === 'danger' ? 'times-circle' : 'info-circle';
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${icon} me-3 fs-4"></i>
+            <div>
+                <strong class="d-block mb-1">${type === 'success' ? 'Success!' : type === 'danger' ? 'Error!' : 'Notice!'}</strong>
+                <span class="small">${message}</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+</script>
+
+<script>
+
+    
     // Global variables
     let currentDiscount = 0;
     const taxRate = 8; // 8% tax

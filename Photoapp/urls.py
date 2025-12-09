@@ -48,6 +48,8 @@ urlpatterns = [
     path('client/<int:client_id>/', views.client_details, name='client_details'),
     path('clients/bulk-assign/', views.bulk_assign_photos, name='bulk_assign_photos'),
     path('clients/delete/', views.delete_clients, name='delete_clients'),
+    path("add-client/", views.add_client, name="add_client"),
+
     
     # Chatbot
     path("chat/", views.chatbot_page, name="chatbot_page"),
@@ -58,4 +60,9 @@ urlpatterns = [
     path('contact/submit/', views.submit_contact_message, name='submit_contact'),
     path('contact-messages/', views.admin_contact_messages, name='admin_contact_messages'),
     path('contact-messages/<int:message_id>/', views.admin_contact_message_detail, name='admin_contact_message_detail'),
+     
+    path('process-cart-payment/', views.process_cart_payment, name='process_cart_payment'),
+    path('verify-cart-payment/', views.verify_cart_payment, name='verify_cart_payment'),
+    path('process-quick-buy/<int:photo_id>/', views.process_quick_buy, name='process_quick_buy'),
+    path('verify-quick-buy/<int:photo_id>/', views.verify_quick_buy, name='verify_quick_buy'),
 ]

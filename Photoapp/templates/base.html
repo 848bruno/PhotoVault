@@ -624,51 +624,144 @@
     </div>
 
     <!-- Payment Modal -->
-    <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Complete Payment</h5>
-                    <button type="button" class="btn-close close-btn" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="paymentForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Card Number</label>
-                                    <input type="text" class="form-control" placeholder="4242 4242 4242 4242" required>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label class="form-label">Expiry Date</label>
-                                    <input type="text" class="form-control" placeholder="MM/YY" required>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label class="form-label">CVC</label>
-                                    <input type="text" class="form-control" placeholder="123" required>
-                                </div>
-                            </div>
+   <div class="modal fade" id="paystackModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Complete Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="paystackPaymentContent">
+                    <!-- Payment Options -->
+                    <div class="text-center mb-4">
+                        <div class="payment-icon-large mb-3">
+                            <i class="fas fa-credit-card fa-3x text-primary"></i>
                         </div>
+                        <h4>Pay KSH <span id="paystackAmountDisplay">0.00</span></h4>
+                        <p class="text-muted">Secure payment powered by Paystack</p>
+                    </div>
+                    
+                    <form id="paystackPaymentForm" onsubmit="initiatePaystackPayment(event)">
                         <div class="mb-3">
-                            <label class="form-label">Name on Card</label>
-                            <input type="text" class="form-control" required>
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="paystackEmail" 
+                                   value="{{ user.email|default:'' }}"
+                                   placeholder="Enter your email"
+                                   required>
+                            <small class="text-muted">Payment receipt will be sent to this email</small>
                         </div>
+                        
                         <div class="mb-3">
-                            <label class="form-label">Email for Receipt</label>
-                            <input type="email" class="form-control" required>
+                            <label class="form-label">Payment Method</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="form-check payment-method-option">
+                                        <input class="form-check-input" type="radio" name="paymentMethod" id="cardPayment" value="card" checked>
+                                        <label class="form-check-label w-100 p-3 border rounded" for="cardPayment">
+                                            <i class="fas fa-credit-card fa-lg me-2 text-primary"></i>
+                                            <span>Card</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-check payment-method-option">
+                                        <input class="form-check-input" type="radio" name="paymentMethod" id="mobilePayment" value="mobile">
+                                        <label class="form-check-label w-100 p-3 border rounded" for="mobilePayment">
+                                            <i class="fas fa-mobile-alt fa-lg me-2 text-success"></i>
+                                            <span>Mobile Money</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-lock me-2"></i>
+                            <small>Your payment is secured with 256-bit SSL encryption</small>
+                        </div>
+                        
                         <div class="d-grid">
-                            <button type="submit" class="btn-pv-primary btn-lg">Pay $49.99</button>
+                            <button type="submit" class="btn btn-primary btn-lg" id="paystackSubmitBtn">
+                                <i class="fas fa-lock me-2"></i>
+                                Pay Securely
+                            </button>
                         </div>
                     </form>
+                    
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Secured by <strong>Paystack</strong>
+                        </small>
+                    </div>
                 </div>
+                
+                <!-- Processing State -->
+                <div id="paystackProcessing" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h5>Redirecting to Paystack...</h5>
+                        <p class="text-muted">You will be redirected to complete your payment securely</p>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-secondary" onclick="cancelPaystackPayment()">
+                                Cancel Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Success State -->
+                <div id="paystackSuccess" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="success-icon mb-3">
+                            <i class="fas fa-check-circle fa-3x text-success"></i>
+                        </div>
+                        <h5 class="text-success">Payment Successful!</h5>
+                        <p id="successMessage" class="text-muted">Your payment has been confirmed</p>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="handlePaymentSuccess()">
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Test button (remove in production) -->
+<button onclick="testPayment()" class="btn btn-sm btn-outline-secondary">
+    Test Payment (KSH 5)
+</button>
+
+<script>
+function testPayment() {
+    openPaystackModal(5, 'test_123');
+}
+</script>
+                <!-- Add this after the success state in your modal -->
+<div id="paystackError" style="display: none;">
+    <div class="text-center py-4">
+        <div class="error-icon mb-3">
+            <i class="fas fa-times-circle fa-3x text-danger"></i>
+        </div>
+        <h5 class="text-danger">Payment Failed</h5>
+        <p id="errorMessage" class="text-muted">There was an error processing your payment</p>
+        <div class="mt-3">
+            <button class="btn btn-primary" onclick="resetPaystackModal()">
+                Try Again
+            </button>
+            <button class="btn btn-outline-secondary ms-2" onclick="closePaymentModal()">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
             </div>
         </div>
     </div>
+</div>
 
     <!-- Order Modal -->
    <!-- Order Modal -->
@@ -2512,9 +2605,363 @@ function submitOrderForm(event) {
         }
         
         function openPaymentModal() {
-            new bootstrap.Modal(document.getElementById('paymentModal')).show();
+            new bootstrap.Modal(document.getElementById('paystackModal')).show();
         }
+       // Paystack Payment Variables
+let currentPaystackAmount = 0;
+let currentOrderId = null;
+let currentReference = null;
+
+// Open payment modal
+function openPaystackModal(amount, orderId = null) {
+    currentPaystackAmount = amount;
+    currentOrderId = orderId;
+    
+    console.log('Opening payment modal with amount:', amount, 'order:', orderId);
+    
+    // Update amount display
+    const amountDisplay = document.getElementById('paystackAmountDisplay');
+    if (amountDisplay) {
+        amountDisplay.textContent = amount.toFixed(2);
+    }
+    
+    // Reset modal states
+    resetPaystackModal();
+    
+    // Set email from user if logged in
+    const emailInput = document.getElementById('paystackEmail');
+    if (emailInput && typeof userEmail !== 'undefined' && userEmail) {
+        emailInput.value = userEmail;
+    }
+    
+    // Show modal
+    const modalElement = document.getElementById('paystackModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+}
+
+// Get CSRF token
+function getCSRFToken() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith('csrftoken=')) {
+                cookieValue = decodeURIComponent(cookie.substring('csrftoken='.length));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Reset modal to initial state
+function resetPaystackModal() {
+    const paymentContent = document.getElementById('paystackPaymentContent');
+    const processingSection = document.getElementById('paystackProcessing');
+    const successSection = document.getElementById('paystackSuccess');
+    const errorSection = document.getElementById('paystackError');
+    
+    if (paymentContent) paymentContent.style.display = 'block';
+    if (processingSection) processingSection.style.display = 'none';
+    if (successSection) successSection.style.display = 'none';
+    if (errorSection) errorSection.style.display = 'none';
+    
+    // Reset form
+    const form = document.getElementById('paystackPaymentForm');
+    if (form) form.reset();
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.global-notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} global-notification position-fixed`;
+    notification.style.cssText = `
+        top: 100px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 400px;
+        animation: slideIn 0.3s ease;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    
+    const icon = type === 'success' ? 'check-circle' : 
+                 type === 'warning' ? 'exclamation-triangle' : 
+                 type === 'danger' ? 'times-circle' : 'info-circle';
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${icon} me-3 fs-4"></i>
+            <div>
+                <strong class="d-block mb-1">${type === 'success' ? 'Success!' : type === 'danger' ? 'Error!' : 'Notice!'}</strong>
+                <span class="small">${message}</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+// Add CSS for slide-in animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Initiate Paystack payment
+async function initiatePaystackPayment(event) {
+    if (event) event.preventDefault();
+    
+    const emailInput = document.getElementById('paystackEmail');
+    if (!emailInput) {
+        console.error('Email input not found');
+        showNotification('Payment system error. Please try again later.', 'danger');
+        return;
+    }
+    
+    const email = emailInput.value.trim();
+    
+    if (!email) {
+        showNotification('Please enter your email address', 'warning');
+        return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address', 'warning');
+        return;
+    }
+    
+    // Safely show processing state
+    const paymentContent = document.getElementById('paystackPaymentContent');
+    const processingSection = document.getElementById('paystackProcessing');
+    
+    if (paymentContent) paymentContent.style.display = 'none';
+    if (processingSection) processingSection.style.display = 'block';
+    
+    try {
+        console.log('Initiating payment for amount:', currentPaystackAmount);
         
+        const response = await fetch("", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                email: email,
+                amount: currentPaystackAmount,
+                order_id: currentOrderId
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Payment initiation response:', data);
+        
+        if (data.success && data.authorization_url) {
+            currentReference = data.reference;
+            
+            // Open Paystack payment page
+            const paymentWindow = window.open(
+                data.authorization_url, 
+                'PaystackPayment',
+                'width=600,height=700,scrollbars=yes'
+            );
+            
+            if (!paymentWindow) {
+                // If popup blocked, show alternative
+                showNotification('Popup blocked. Click the link to complete payment.', 'warning');
+                
+                // Create a button to open the payment page
+                const modalBody = document.querySelector('#paystackModal .modal-body');
+                if (modalBody && processingSection) {
+                    processingSection.innerHTML = `
+                        <div class="text-center py-4">
+                            <div class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Popup was blocked. Please click the button below to complete payment.
+                            </div>
+                            <a href="${data.authorization_url}" target="_blank" class="btn btn-primary btn-lg mb-3">
+                                <i class="fas fa-external-link-alt me-2"></i>
+                                Complete Payment on Paystack
+                            </a>
+                            <div class="mt-3">
+                                <button class="btn btn-outline-secondary" onclick="resetPaystackModal()">
+                                    Cancel Payment
+                                </button>
+                            </div>
+                            <div class="mt-4 small text-muted">
+                                <p>After completing payment, return to this page.</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="verifyPaystackPayment('${data.reference}')">
+                                    I've completed the payment
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Check for payment completion
+            const checkInterval = setInterval(() => {
+                if (paymentWindow.closed) {
+                    clearInterval(checkInterval);
+                    console.log('Payment window closed, verifying payment...');
+                    verifyPaystackPayment(data.reference);
+                }
+            }, 2000);
+            
+            // Set a timeout
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                if (!paymentWindow.closed) {
+                    paymentWindow.close();
+                }
+                verifyPaystackPayment(data.reference);
+            }, 120000);
+            
+        } else {
+            // Show error
+            if (processingSection) processingSection.style.display = 'none';
+            if (paymentContent) paymentContent.style.display = 'block';
+            
+            showNotification(data.error || 'Payment initialization failed. Please check your details and try again.', 'danger');
+        }
+    } catch (error) {
+        console.error('Payment error:', error);
+        
+        if (processingSection) processingSection.style.display = 'none';
+        if (paymentContent) paymentContent.style.display = 'block';
+        
+        showNotification('Network error. Please check your connection and try again.', 'danger');
+    }
+}
+
+// Verify Paystack payment
+async function verifyPaystackPayment(reference) {
+    console.log('Verifying payment with reference:', reference);
+    
+    const processingSection = document.getElementById('paystackProcessing');
+    if (processingSection) {
+        processingSection.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Verifying Payment...</h5>
+                <p class="text-muted">Please wait while we verify your payment</p>
+            </div>
+        `;
+    }
+    
+    try {
+        const response = await fetch(`/verify-paystack-payment/?reference=${reference}`);
+        const data = await response.json();
+        console.log('Verification response:', data);
+        
+        if (data.success) {
+            // Payment successful
+            const successSection = document.getElementById('paystackSuccess');
+            const processingSection = document.getElementById('paystackProcessing');
+            
+            if (processingSection) processingSection.style.display = 'none';
+            if (successSection) {
+                successSection.style.display = 'block';
+                const successMessage = document.getElementById('successMessage');
+                if (successMessage) {
+                    successMessage.textContent = `Payment of KSH ${data.amount} confirmed!`;
+                }
+            }
+            
+            showNotification(`Payment successful! Reference: ${reference}`, 'success');
+            
+            // Auto-close modal and redirect after 3 seconds
+            setTimeout(() => {
+                handlePaymentSuccess();
+            }, 3000);
+            
+        } else {
+            // Payment failed
+            showNotification(`Payment verification failed: ${data.error}`, 'danger');
+            resetPaystackModal();
+        }
+    } catch (error) {
+        console.error('Verification error:', error);
+        showNotification('Verification failed. Please contact support.', 'danger');
+        
+        // Retry verification after delay
+        setTimeout(() => {
+            verifyPaystackPayment(reference);
+        }, 3000);
+    }
+}
+
+// Handle payment success
+function handlePaymentSuccess() {
+    const modalElement = document.getElementById('paystackModal');
+    if (modalElement) {
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+    }
+    
+    // Redirect or reload based on context
+    if (currentOrderId) {
+        // Redirect to order tracking
+        window.location.href = `/track-order/${currentOrderId}/`;
+    } else {
+        // Reload page to show updated purchase status
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    }
+}
+
+// Cancel payment
+function cancelPaystackPayment() {
+    resetPaystackModal();
+}
+
+// Close payment modal
+function closePaymentModal() {
+    const modalElement = document.getElementById('paystackModal');
+    if (modalElement) {
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+    }
+}
         function openOrderModal() {
              globalOpenOrderModal();
         }

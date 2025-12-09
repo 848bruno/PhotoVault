@@ -3,13 +3,19 @@ import os
 from dotenv import load_dotenv
 from decouple import config
 
+
 OPENROUTER_API_KEY = config("OPENROUTER_API_KEY")
+PAYSTACK_PUBLIC_KEY = config("PAYSTACK_PUBLIC_KEY")
+PAYSTACK_SECRET_KEY = config("PAYSTACK_SECRET_KEY")
 
 
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY")
+PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY")
+
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

@@ -1,0 +1,218 @@
+<!-- Create test_paystack.html in your templates folder -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Paystack Integration</title>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #00ba8e;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Test Paystack Payment</h2>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="customer@example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="amount">Amount (KES):</label>
+            <input type="number" id="amount" value="10">
+        </div>
+        
+        <button onclick="testDirectPaystack()">Test Direct Paystack</button>
+        <button onclick="testViaBackend()" style="background: #007bff;">Test Via Backend</button>
+        
+        <div id="result" class="result"></div>
+        
+        <div style="margin-top: 30px; font-size: 12px; color: #666;">
+            <h4>Debug Info:</h4>
+            <div id="debug"></div>
+        </div>
+    </div>
+
+    <script>
+        function showResult(message, type = 'success') {
+            const result = document.getElementById('result');
+            result.innerHTML = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+        
+        function addDebug(message) {
+            const debug = document.getElementById('debug');
+            debug.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+        }
+        
+        // Test direct Paystack (without backend)
+        function testDirectPaystack() {
+            const email = document.getElementById('email').value;
+            const amount = document.getElementById('amount').value;
+            
+            addDebug(`Testing direct Paystack with email: ${email}, amount: ${amount}`);
+            
+            // Direct Paystack integration
+            const handler = PaystackPop.setup({
+                key: '', // Your test public key
+                email: email,
+                amount: amount * 100, // in kobo
+                currency: 'KES',
+                ref: 'PV_' + Date.now(),
+                callback: function(response) {
+                    showResult(`Payment successful! Reference: ${response.reference}`, 'success');
+                    addDebug(`Direct payment success: ${JSON.stringify(response)}`);
+                },
+                onClose: function() {
+                    showResult('Payment window closed.', 'error');
+                    addDebug('Payment window closed by user');
+                }
+            });
+            
+            handler.openIframe();
+        }
+        
+        // Test via backend
+        async function testViaBackend() {
+            const email = document.getElementById('email').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            
+            addDebug(`Testing via backend with email: ${email}, amount: ${amount}`);
+            
+            try {
+                showResult('Initializing payment...', 'success');
+                
+                // Get CSRF token
+                function getCSRFToken() {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.startsWith('csrftoken=')) {
+                                cookieValue = decodeURIComponent(cookie.substring('csrftoken='.length));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+                
+                const response = await fetch('/initiate-paystack-payment/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        amount: amount,
+                        order_id: 'test_' + Date.now()
+                    })
+                });
+                
+                const data = await response.json();
+                addDebug(`Backend response: ${JSON.stringify(data)}`);
+                
+                if (data.success && data.authorization_url) {
+                    showResult('Redirecting to Paystack...', 'success');
+                    
+                    // Open Paystack payment page
+                    const paymentWindow = window.open(
+                        data.authorization_url, 
+                        'PaystackPayment',
+                        'width=600,height=700,scrollbars=yes'
+                    );
+                    
+                    if (!paymentWindow) {
+                        showResult('Popup blocked. Please allow popups.', 'error');
+                        return;
+                    }
+                    
+                    // Check for payment completion
+                    const checkInterval = setInterval(() => {
+                        if (paymentWindow.closed) {
+                            clearInterval(checkInterval);
+                            verifyPayment(data.reference);
+                        }
+                    }, 2000);
+                    
+                } else {
+                    showResult(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Network error: ${error.message}`, 'error');
+                addDebug(`Error: ${error.message}`);
+            }
+        }
+        
+        async function verifyPayment(reference) {
+            addDebug(`Verifying payment: ${reference}`);
+            
+            try {
+                const response = await fetch(`/verify-paystack-payment/?reference=${reference}`);
+                const data = await response.json();
+                
+                addDebug(`Verification response: ${JSON.stringify(data)}`);
+                
+                if (data.success) {
+                    showResult(`Payment verified! Amount: KSH ${data.amount}`, 'success');
+                } else {
+                    showResult(`Verification failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Verification error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

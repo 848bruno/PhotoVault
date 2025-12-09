@@ -349,3 +349,32 @@ class ContactMessage(models.Model):
         if user:
             self.replied_by = user
         self.save()
+
+class PaystackPayment(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('abandoned', 'Abandoned'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order = models.ForeignKey('PrintOrder', on_delete=models.SET_NULL, null=True, blank=True)
+    email = models.EmailField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reference = models.CharField(max_length=100, unique=True)
+    access_code = models.CharField(max_length=100, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    paystack_response = models.JSONField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Paystack-{self.reference}"
+    
+    @property
+    def is_successful(self):
+        return self.status == 'success'

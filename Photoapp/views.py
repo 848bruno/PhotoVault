@@ -9,7 +9,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth.models import User
-from .models import Photo, Profile, Cart, Purchase,PrintOrder, PrintOrderItem, OrderStatusUpdate,PrintPrice
+from .models import Photo, Profile, Cart, Purchase, PrintOrder, PrintOrderItem, OrderStatusUpdate, PrintPrice, PaystackPayment
 from decimal import Decimal
 from django.db import transaction, models
 from django.http import JsonResponse
@@ -20,14 +20,11 @@ from django.db.models import Sum, Count, Avg, Q
 from datetime import datetime, timedelta
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-
-
+import os
+from dotenv import load_dotenv
 import json
-
 import requests
-
 from django.views.decorators.csrf import csrf_exempt
-
 from django.conf import settings
 
 
@@ -1377,63 +1374,7 @@ def clientManage(request):
     # ---------------------------------------------------------
     # INSERTED: Registration logic for adding new clients
     # ---------------------------------------------------------
-    if request.method == 'POST':
-
-        # SAFELY get all fields
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        user_type = request.POST.get('user_type')
-        password = request.POST.get('password')
-        confirm_password = request.POST.get('confirm_password')
-        terms = request.POST.get('terms')
-
-        # Validate required fields
-        if not all([first_name, last_name, username, email, user_type, password, confirm_password]):
-            messages.error(request, "Please fill in all required fields.")
-            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
-
-        # Validate terms
-        if not terms:
-            messages.error(request, "You must agree to the Terms and Privacy Policy.")
-            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
-
-        # Password match check
-        if password != confirm_password:
-            messages.error(request, "Passwords do not match.")
-            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
-
-        # Ensure username is unique
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Username already exists.")
-            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
-
-        # Ensure email is unique
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "Email already registered.")
-            return render(request, 'clientManage.html', {'profile_choices': Profile.USER_TYPES})
-
-        # Create user
-        user = User.objects.create_user(
-            username=username,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            email=email
-        )
-
-        # CREATE PROFILE associated with the user
-        Profile.objects.create(
-            user=user,
-            phone=phone,
-            user_type=user_type
-        )
-
-        messages.success(request, "Client added successfully!")
-        return redirect('clientManage')
-
+    
     # ---------------------------------------------------------
     # ORIGINAL CLIENT MANAGEMENT LOGIC (NOT MODIFIED)
     # ---------------------------------------------------------
@@ -1553,6 +1494,102 @@ def clientManage(request):
     }
 
     return render(request, 'clientManage.html', context)
+
+@login_required
+def add_client(request):
+    """Add a new client (AJAX endpoint)"""
+    if not request.user.profile.is_photographer:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    if request.method == "POST":
+        try:
+            # Get form data
+            first_name = request.POST.get('first_name')
+            last_name = request.POST.get('last_name')
+            username = request.POST.get('username')
+            email = request.POST.get('email')
+            phone = request.POST.get('phone')
+            user_type = request.POST.get('user_type')
+            password = request.POST.get('password')
+            confirm_password = request.POST.get('confirm_password')
+            
+            # Validate required fields
+            if not all([first_name, last_name, username, email, user_type, password, confirm_password]):
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Please fill in all required fields'
+                })
+            
+            # Validate password match
+            if password != confirm_password:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Passwords do not match'
+                })
+            
+            # Check if username already exists
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Username already exists. Please choose a different username.'
+                })
+            
+            # Check if email already exists
+            if User.objects.filter(email=email).exists():
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Email already registered. Please use a different email.'
+                })
+            
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                email=email
+            )
+            
+            # Create profile
+            try:
+                # Check if profile already exists (should not happen but just in case)
+                if hasattr(user, 'profile'):
+                    return JsonResponse({
+                        'success': False, 
+                        'error': 'User already has a profile'
+                    })
+                
+                Profile.objects.create(
+                    user=user,
+                    phone=phone or '',
+                    user_type=user_type
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Client {user.get_full_name()} added successfully',
+                    'client_id': user.id,
+                    'client_name': user.get_full_name()
+                })
+                
+            except Exception as e:
+                # If profile creation fails, delete the user to avoid orphaned users
+                user.delete()
+                return JsonResponse({
+                    'success': False, 
+                    'error': f'Error creating profile: {str(e)}'
+                })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Error adding client: {str(e)}'
+            })
+    
+    return JsonResponse({
+        'success': False, 
+        'error': 'Invalid request method'
+    })
 
 
 @login_required
@@ -2353,3 +2390,401 @@ def admin_contact_messages(request):
     }
     
     return render(request, 'contact_messages.html', context)
+# In Photoapp/views.py
+import json
+import time
+import requests
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+
+load_dotenv()
+# Add your Paystack secret key here or in settings.py
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY") # Replace with your test key
+# Add these imports at the top if not already there
+from django.db import transaction
+import uuid
+
+# Add these functions after your existing Paystack views
+
+@csrf_exempt
+@login_required
+def process_cart_payment(request):
+    """Process payment for cart items"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            amount = float(data.get('amount', 0))
+            
+            if not email:
+                return JsonResponse({'success': False, 'error': 'Email is required'})
+            
+            if amount <= 0:
+                return JsonResponse({'success': False, 'error': 'Invalid amount'})
+            
+            # Get user's cart items
+            cart_items = Cart.objects.filter(user=request.user, is_active=True)
+            
+            if not cart_items.exists():
+                return JsonResponse({'success': False, 'error': 'Cart is empty'})
+            
+            # Store cart data in session for after payment
+            cart_photo_ids = list(cart_items.values_list('photo_id', flat=True))
+            request.session['pending_payment_cart'] = cart_photo_ids
+            request.session['pending_payment_amount'] = amount
+            request.session['pending_payment_email'] = email
+            
+            # Initialize Paystack payment
+            amount_in_kobo = int(amount * 100)
+            timestamp = int(time.time())
+            reference = f"CART_{request.user.id}_{timestamp}"
+            
+            url = "https://api.paystack.co/transaction/initialize"
+            headers = {
+                "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            callback_url = request.build_absolute_uri('/verify-cart-payment/')
+            
+            payload = {
+                "email": email,
+                "amount": amount_in_kobo,
+                "currency": "KES",
+                "reference": reference,
+                "callback_url": callback_url,
+                "metadata": {
+                    "user_id": request.user.id,
+                    "cart_type": "cart_checkout",
+                    "amount": amount
+                }
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            response_data = response.json()
+            
+            if response_data.get('status'):
+                # Save payment record
+                PaystackPayment.objects.create(
+                    user=request.user,
+                    email=email,
+                    amount=amount,
+                    reference=reference,
+                    access_code=response_data['data']['access_code'],
+                    status='pending'
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'authorization_url': response_data['data']['authorization_url'],
+                    'reference': reference
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': response_data.get('message', 'Payment initialization failed')
+                })
+                
+        except Exception as e:
+            print(f"Cart payment error: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@csrf_exempt
+def verify_cart_payment(request):
+    """Verify cart payment and process cart items"""
+    reference = request.GET.get('reference')
+    
+    if not reference:
+        return JsonResponse({'success': False, 'error': 'No reference provided'})
+    
+    # Verify with Paystack
+    url = f"https://api.paystack.co/transaction/verify/{reference}"
+    headers = {
+        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response_data = response.json()
+        
+        if response_data.get('status'):
+            data = response_data['data']
+            
+            if data['status'] == 'success':
+                # Get user ID from metadata
+                metadata = data.get('metadata', {})
+                user_id = metadata.get('user_id')
+                
+                if user_id:
+                    user = User.objects.get(id=user_id)
+                    
+                    # Check session for cart data
+                    cart_photo_ids = request.session.get('pending_payment_cart', [])
+                    if cart_photo_ids:
+                        # Process cart items
+                        success = process_cart_after_payment(user, cart_photo_ids, data)
+                        
+                        if success:
+                            # Clear session data
+                            if 'pending_payment_cart' in request.session:
+                                del request.session['pending_payment_cart']
+                            if 'pending_payment_amount' in request.session:
+                                del request.session['pending_payment_amount']
+                            if 'pending_payment_email' in request.session:
+                                del request.session['pending_payment_email']
+                            
+                            # Update payment record
+                            payment = PaystackPayment.objects.get(reference=reference)
+                            payment.status = 'success'
+                            payment.paystack_response = data
+                            payment.paid_at = timezone.now()
+                            payment.save()
+                            
+                            return JsonResponse({
+                                'success': True,
+                                'message': 'Payment successful! Cart processed.',
+                                'redirect_url': '/client/'
+                            })
+                
+                return JsonResponse({
+                    'success': False,
+                    'error': 'User data not found'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f"Payment status: {data['status']}"
+                })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Verification failed'
+            })
+            
+    except Exception as e:
+        print(f"Cart verification error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+def process_cart_after_payment(user, photo_ids, payment_data):
+    """Process cart items after successful payment"""
+    try:
+        with transaction.atomic():
+            # Get cart items
+            cart_items = Cart.objects.filter(
+                user=user, 
+                photo_id__in=photo_ids,
+                is_active=True
+            ).select_related('photo')
+            
+            # Create purchases for each item
+            purchases = []
+            for cart_item in cart_items:
+                if not cart_item.photo.is_purchased:
+                    purchase = Purchase(
+                        user=user,
+                        photo=cart_item.photo,
+                        amount_paid=cart_item.photo.price * cart_item.quantity,
+                        status='completed',
+                        transaction_id=payment_data.get('reference', '')
+                    )
+                    purchases.append(purchase)
+                    
+                    # Mark photo as purchased
+                    cart_item.photo.is_purchased = True
+                    cart_item.photo.save()
+            
+            # Bulk create purchases
+            Purchase.objects.bulk_create(purchases)
+            
+            # Clear the cart
+            cart_items.delete()
+            
+            return True
+            
+    except Exception as e:
+        print(f"Error processing cart: {str(e)}")
+        return False
+
+@csrf_exempt
+@login_required
+def process_quick_buy(request, photo_id):
+    """Process quick buy (single photo purchase)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            amount = float(data.get('amount', 0))
+            
+            photo = get_object_or_404(Photo, id=photo_id, is_purchased=False)
+            
+            if not email:
+                return JsonResponse({'success': False, 'error': 'Email is required'})
+            
+            if amount != float(photo.price):
+                return JsonResponse({'success': False, 'error': 'Amount mismatch'})
+            
+            # Store photo ID in session for after payment
+            request.session['pending_quick_buy_photo'] = photo_id
+            request.session['pending_payment_amount'] = amount
+            request.session['pending_payment_email'] = email
+            
+            # Initialize Paystack payment
+            amount_in_kobo = int(amount * 100)
+            timestamp = int(time.time())
+            reference = f"QUICK_{photo_id}_{timestamp}"
+            
+            url = "https://api.paystack.co/transaction/initialize"
+            headers = {
+                "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            callback_url = request.build_absolute_uri(f'/verify-quick-buy/{photo_id}/')
+            
+            payload = {
+                "email": email,
+                "amount": amount_in_kobo,
+                "currency": "KES",
+                "reference": reference,
+                "callback_url": callback_url,
+                "metadata": {
+                    "user_id": request.user.id,
+                    "photo_id": photo_id,
+                    "amount": amount,
+                    "type": "quick_buy"
+                }
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            response_data = response.json()
+            
+            if response_data.get('status'):
+                # Save payment record
+                PaystackPayment.objects.create(
+                    user=request.user,
+                    email=email,
+                    amount=amount,
+                    reference=reference,
+                    access_code=response_data['data']['access_code'],
+                    status='pending'
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'authorization_url': response_data['data']['authorization_url'],
+                    'reference': reference
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': response_data.get('message', 'Payment initialization failed')
+                })
+                
+        except Exception as e:
+            print(f"Quick buy error: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@csrf_exempt
+def verify_quick_buy(request, photo_id):
+    """Verify quick buy payment"""
+    reference = request.GET.get('reference')
+    
+    if not reference:
+        return JsonResponse({'success': False, 'error': 'No reference provided'})
+    
+    # Verify with Paystack
+    url = f"https://api.paystack.co/transaction/verify/{reference}"
+    headers = {
+        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response_data = response.json()
+        
+        if response_data.get('status'):
+            data = response_data['data']
+            
+            if data['status'] == 'success':
+                # Get user ID from metadata
+                metadata = data.get('metadata', {})
+                user_id = metadata.get('user_id')
+                
+                if user_id:
+                    user = User.objects.get(id=user_id)
+                    photo = Photo.objects.get(id=photo_id)
+                    
+                    # Create purchase
+                    purchase = Purchase.objects.create(
+                        user=user,
+                        photo=photo,
+                        amount_paid=data['amount'] / 100,
+                        status='completed',
+                        transaction_id=reference
+                    )
+                    
+                    # Mark photo as purchased
+                    photo.is_purchased = True
+                    photo.save()
+                    
+                    # Remove from cart if exists
+                    Cart.objects.filter(user=user, photo=photo).delete()
+                    
+                    # Update payment record
+                    payment = PaystackPayment.objects.get(reference=reference)
+                    payment.status = 'success'
+                    payment.paystack_response = data
+                    payment.paid_at = timezone.now()
+                    payment.save()
+                    
+                    # Clear session data
+                    if 'pending_quick_buy_photo' in request.session:
+                        del request.session['pending_quick_buy_photo']
+                    if 'pending_payment_amount' in request.session:
+                        del request.session['pending_payment_amount']
+                    if 'pending_payment_email' in request.session:
+                        del request.session['pending_payment_email']
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Payment successful! Photo purchased.',
+                        'redirect_url': '/client/'
+                    })
+                
+                return JsonResponse({
+                    'success': False,
+                    'error': 'User data not found'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f"Payment status: {data['status']}"
+                })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Verification failed'
+            })
+            
+    except Exception as e:
+        print(f"Quick buy verification error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })

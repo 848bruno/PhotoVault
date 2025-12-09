@@ -1022,35 +1022,81 @@
         showNotification('Export feature coming soon!', 'info');
     }
 
-    // Open add client modal
     function openAddClientModal() {
-        const modal = new bootstrap.Modal(document.getElementById('addClientModal'));
-        modal.show();
-    }
+    const modal = new bootstrap.Modal(document.getElementById('addClientModal'));
+    modal.show();
+}
+// Update the form submit handler in your client_manage.html
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("addClientForm");
 
-    // Submit add client form
-    function submitAddClient() {
-        const form = document.getElementById('addClientForm');
+    form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent form from submitting normally
+
         const formData = new FormData(form);
-        
-        // Basic validation
-        if (!formData.get('first_name') || !formData.get('last_name') || 
-            !formData.get('email') || !formData.get('username') || !formData.get('password')) {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Adding Client...';
+
+        // Validation
+        if (!formData.get('first_name') || !formData.get('last_name') ||
+            !formData.get('email') || !formData.get('username') ||
+            !formData.get('password') || !formData.get('confirm_password')) {
             showNotification('Please fill all required fields', 'warning');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
             return;
         }
-        
-        showNotification('Adding new client...', 'info');
-        
-        // Simulate API call
-        setTimeout(() => {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addClientModal'));
-            modal.hide();
-            showNotification('New client added successfully', 'success');
-            // In a real app, you would reload the page or update the table via AJAX
-            setTimeout(() => location.reload(), 1000);
-        }, 1500);
-    }
+
+        if (formData.get('password') !== formData.get('confirm_password')) {
+            showNotification('Passwords do not match', 'danger');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+            return;
+        }
+
+        try {
+            const response = await fetch("{% url 'add_client' %}", {
+                method: "POST",
+                body: formData,
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification(data.message || "Client added successfully", "success");
+
+                // Clear the form
+                form.reset();
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById("addClientModal"));
+                if (modal) {
+                    modal.hide();
+                }
+
+                // Refresh the page to show new client
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification(data.error || "Failed to add client", "danger");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }
+        } catch (err) {
+            showNotification("Network error. Please try again.", "danger");
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+            console.error(err);
+        }
+    });
+});
 
     // Quick action functions
     function sendBulkEmail() {
@@ -1123,5 +1169,52 @@
         const sidebar = document.querySelector('.sidebar');
         sidebar.classList.toggle('show');
     }
+    document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("addClientForm");
+
+    form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        // Validation
+        if (!formData.get('first_name') || !formData.get('last_name') ||
+            !formData.get('email') || !formData.get('username') ||
+            !formData.get('password') || !formData.get('confirm_password')) {
+            showNotification('Please fill all required fields', 'warning');
+            return;
+        }
+
+        if (formData.get('password') !== formData.get('confirm_password')) {
+            showNotification('Passwords do not match', 'danger');
+            return;
+        }
+
+        try {
+            const response = await fetch("{% url 'add_client' %}", {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification("Client added successfully", "success");
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById("addClientModal"));
+                modal.hide();
+
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showNotification(data.error, "danger");
+            }
+        } catch (err) {
+            showNotification("Server error", "danger");
+            console.error(err);
+        }
+    });
+});
+
 </script>
 {% endblock %}

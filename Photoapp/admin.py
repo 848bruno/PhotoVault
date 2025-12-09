@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     Profile, Photo, Cart, Purchase, 
     PrintPrice, PrintOrder, PrintOrderItem, OrderStatusUpdate,
-    ContactMessage  # Add this import
+    ContactMessage, PaystackPayment
 )
 
 @admin.register(Profile)
@@ -46,6 +46,60 @@ class PrintOrderItemAdmin(admin.ModelAdmin):
 class OrderStatusUpdateAdmin(admin.ModelAdmin):
     list_display = ['order', 'status', 'updated_by', 'created_at']
     list_filter = ['status']
+
+# ===== PAYSTACK PAYMENT ADMIN =====
+@admin.register(PaystackPayment)
+class PaystackPaymentAdmin(admin.ModelAdmin):
+    list_display = [
+        'reference', 'user', 'email', 'amount', 'status', 
+        'is_successful', 'created_at', 'paid_at'
+    ]
+    list_filter = ['status', 'created_at']
+    search_fields = ['reference', 'user__username', 'user__email', 'email']
+    readonly_fields = ['reference', 'access_code', 'paystack_response', 'created_at']
+    list_per_page = 25
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Payment Information', {
+            'fields': ('user', 'email', 'amount', 'reference', 'status')
+        }),
+        ('Order & Transaction Details', {
+            'fields': ('order', 'access_code'),
+            'classes': ('collapse',)
+        }),
+        ('Paystack Response', {
+            'fields': ('paystack_response',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('paid_at', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['mark_as_success', 'mark_as_failed', 'mark_as_pending']
+    
+    def is_successful(self, obj):
+        return obj.is_successful
+    is_successful.boolean = True
+    is_successful.short_description = 'Successful'
+    
+    def mark_as_success(self, request, queryset):
+        from django.utils import timezone
+        updated = queryset.update(status='success', paid_at=timezone.now())
+        self.message_user(request, f"{updated} payments marked as successful.")
+    mark_as_success.short_description = "Mark selected payments as successful"
+    
+    def mark_as_failed(self, request, queryset):
+        updated = queryset.update(status='failed')
+        self.message_user(request, f"{updated} payments marked as failed.")
+    mark_as_failed.short_description = "Mark selected payments as failed"
+    
+    def mark_as_pending(self, request, queryset):
+        updated = queryset.update(status='pending')
+        self.message_user(request, f"{updated} payments marked as pending.")
+    mark_as_pending.short_description = "Mark selected payments as pending"
 
 # ===== CONTACT MESSAGE ADMIN =====
 @admin.register(ContactMessage)
