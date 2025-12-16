@@ -61,7 +61,8 @@ def chatbot_api(request):
             if not user_message:
                 return JsonResponse({"reply": "Please provide a message."})
             
-            # Get or create conversation history
+            # Get or create conversation history       
+            
             conversation_key = f"chat_history_{request.user.id}"
             conversation_history = cache.get(conversation_key, [])
             
