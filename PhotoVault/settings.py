@@ -2,6 +2,15 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 from decouple import config
+import cloudinary
+
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+)
+
 
 
 OPENROUTER_API_KEY = config("OPENROUTER_API_KEY")
@@ -48,8 +57,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
      "Photoapp.apps.PhotoappConfig",
+     'cloudinary',
+    'cloudinary_storage',
     
 ]
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
