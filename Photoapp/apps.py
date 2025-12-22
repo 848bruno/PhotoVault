@@ -5,5 +5,6 @@ class PhotoappConfig(AppConfig):
     name = 'Photoapp'
 
     def ready(self):
-        import Photoapp.signals
+        # import Photoapp.signals
+        pass
 
