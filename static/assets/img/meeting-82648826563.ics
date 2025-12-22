@@ -1,0 +1,44 @@
+BEGIN:VCALENDAR
+PRODID:-//zoom.us//iCalendar Event//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+CLASS:PUBLIC
+BEGIN:VTIMEZONE
+TZID:Africa/Nairobi
+LAST-MODIFIED:20251211T094730Z
+TZURL:https://www.tzurl.org/zoneinfo-outlook/Africa/Nairobi
+X-LIC-LOCATION:Africa/Nairobi
+BEGIN:STANDARD
+TZNAME:EAT
+TZOFFSETFROM:+0300
+TZOFFSETTO:+0300
+DTSTART:19700101T000000
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTAMP:20251218T083139Z
+DTSTART;TZID=Africa/Nairobi:20251217T080000
+DTEND;TZID=Africa/Nairobi:20251218T080000
+SUMMARY:eMobilis M.T.A's Presentations
+UID:EVENTLpNtaGnWQOuJQtOJetAsQQ@zoom.us
+DESCRIPTION:eMobilis M.T.A is inviting you to a scheduled Zoom meeting.\n
+ Join Zoom Meeting\nhttps://us02web.zoom.us/j/82648826563?pwd=Iqh2Zzn44AC
+ UJ4FYhMmSe6orAXS6lJ.1\n\nView meeting insights with Zoom AI Companion\nh
+ ttps://us02web.zoom.us/launch/edl?muid=a76c424a-ce42-4f1d-a460-429dddba6
+ 501\n\nMeeting ID: 826 4882 6563\nPasscode: 918343\n\n---\n\nOne tap mob
+ ile\n+16892781000\,\,82648826563#\,\,\,\,*918343# US\n+17193594580\,\,82
+ 648826563#\,\,\,\,*918343# US\n\nJoin instructions\nhttps://us02web.zoom
+ .us/meetings/82648826563/invitations?signature=ghgPYKjI_OMDNFMi_3Zt-OaKw
+ mqHnmVB-KIqx2EybVQ\n\n
+TZID:Africa/Nairobi
+LOCATION:https://us02web.zoom.us/j/82648826563?pwd=Iqh2Zzn44ACUJ4FYhMmSe6
+ orAXS6lJ.1
+RRULE:FREQ=DAILY;INTERVAL=1
+BEGIN:VALARM
+TRIGGER:-PT10M
+ACTION:DISPLAY
+DESCRIPTION:Reminder
+END:VALARM
+END:VEVENT
+END:VCALENDAR
